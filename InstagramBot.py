@@ -1,6 +1,8 @@
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
 import os
 import time
 import random
@@ -23,6 +25,7 @@ class InstagramBot:
         self.posts_seen = 0
         
     def quit(self):
+        print()
         print("%-------------------------------------------------------%")
         print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
         print("%-------------------------------------------------------%")
@@ -43,7 +46,7 @@ class InstagramBot:
         time.sleep(5)
 
 
-    def like_posts(self, hashtag, maxLikes):
+    def like_posts(self, hashtag, amount):
         current_posts_seen = 0
         self.driver.get(self.base_url + 'explore/tags/' + hashtag)
         time.sleep(2)
@@ -51,7 +54,7 @@ class InstagramBot:
         time.sleep(5)
 
         #For each the post
-        while (current_posts_seen < maxLikes):
+        while (current_posts_seen < (amount/len(hashtags))*4 and self.likes_given < amount):
             self.posts_seen+=1
             current_posts_seen+=1
             chanceToLikePost = random.uniform(0.6, 0.85)
@@ -76,7 +79,7 @@ class InstagramBot:
         while(self.likes_given<amount):
             for hashtag in hashtags:
                 try:
-                    self.like_posts(hashtag, (amount/len(hashtags))*3)
+                    self.like_posts(hashtag, amount)
                 except NoSuchElementException: 
                     print("x", end="", flush=True)
             time.sleep(random.randrange(16, 64))
@@ -88,5 +91,6 @@ class InstagramBot:
         try:
             self.like_hashtags(params[0], params[1])
         except ElementClickInterceptedException as e:
-            print(e)
+            # print(e)
+            pass
         self.quit()

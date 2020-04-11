@@ -38,6 +38,7 @@ class SubmitHubBot:
         print("Logged in as " + self.username + " in " + self.base_url)
 
     def quit(self):
+        print()
         print("%-------------------------------------------------------%")
         print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
         print("%-------------------------------------------------------%")
