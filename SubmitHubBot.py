@@ -2,27 +2,22 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
+
+from Bot import Bot
+
 import os
 import time
 import random
 
-class SubmitHubBot:
+class SubmitHubBot(Bot):
 
     def __init__ (self, username, password):
-        self.username = username
-        self.password = password
-        
-        self.chrome_options = webdriver.ChromeOptions()
+        super().__init__(username, password)
+
         self.chrome_options.add_argument("--mute-audio")
-        self.chrome_options.add_argument("--headless")
-        self.chrome_options.add_argument("--window-size=1200x800")
 
-        self.driver = None
-
+        self.site = "SubmitHub"
         self.base_url = "https://www.submithub.com/"
-
-        self.likes_given = 0
-        self.posts_seen = 0
 
 
     def login(self):
@@ -35,14 +30,7 @@ class SubmitHubBot:
         self.driver.find_element_by_xpath('//*[@id="my-account-login"]/form/div[3]/button[1]').click()
 
         time.sleep(5)
-        print("Logged in as " + self.username + " in " + self.base_url)
-
-    def quit(self):
-        print()
-        print("%-------------------------------------------------------%")
-        print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
-        print("%-------------------------------------------------------%")
-        self.driver.quit()
+        # print("Logged in as " + self.username + " in " + self.base_url)
 
     def listen_time(self):
         return random.randrange(29, 61)
@@ -72,22 +60,24 @@ class SubmitHubBot:
                 time.sleep(1)
                 
         self.driver.find_element_by_class_name('thumb-up').click()
-        print("!", end="", flush=True)
+        # print("!", end="", flush=True)
         time.sleep(random.randrange(8, 12))
         self.driver.find_element_by_class_name('skip-next').click()
         self.likes_given+=1
 
 
     def hot_or_not(self, amount):
-            self.driver.get(self.base_url + "hot-or-not") 
-            while(self.likes_given<amount):
-                try:
-                    self.like_music()
-                except NoSuchElementException as e:
-                    print(e)
+        self.driver.get(self.base_url + "hot-or-not") 
+        self.max_likes = amount
+        while(self.likes_given<amount):
+            try:
+                self.like_music()
+            except NoSuchElementException as e:
+                # print(e)
+                pass
 
     def run(self, params):
         self.login()
-        print()
+        # print()
         self.hot_or_not(params[0])
         self.quit()

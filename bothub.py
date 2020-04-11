@@ -3,6 +3,7 @@ import random
 import threading
 import logging
 import time
+import curses
 
 #Bots
 from SubmitHubBot import SubmitHubBot
@@ -18,7 +19,7 @@ params = {
 
     #SubmitHub: Number of songs to rate.
     'submithub': [
-        [200]
+        [100]
     ],
 
     #Instagram: Hashtags, Number of posts to like
@@ -33,30 +34,68 @@ params = {
     'maeig': [
         [
             ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
-            400
+            200
         ],
         [
             (lambda x, y : (lambda z: random.sample(z, len(z)))(x+y)) (
                 ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
                 ["lifecoach", "mindsetcoach", "jungiancoach", "transformationalcoach", "bemindful", "womenempoweringwomen", "womensupportingwomen", "behappy", "loveandlight", "spiritjunkie", "personaldevelopment", "liveinthemoment", "personalgrowth", "bepresent", "lifecoach ", "lifegoals", "selfdevelopment", "findyourself", "soulsearching", "choosehappiness", "freespirit", "attitudeofgratitude", "goodvibes", "raiseyourvibration", "embracelife", "propelwomen", "womenintheworld", "bebold", "empoweredwomen", "happyheart ", "liveyourdreams", "celebratelife"]
             ),
-            400
+            200
         ]
     ]
 }
 
 
+def interface(stdscr, running_bots, threads):
 
-def bot_thread(bots, i, pvals):
+    #Use colors
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    stdscr.bkgd(' ', curses.color_pair(1) | curses.A_BOLD)
+
+    #Set cursor invisible
+    curses.curs_set(0)
+
+    # Clear and refresh the screen for a blank canvas
+
+    while any(t.is_alive() for t in threads):
+
+        stdscr.clear()
+
+        height, width = stdscr.getmaxyx()
+
+
+        # Remember this, it's pretty funny
+        #curses.beep()
+        #curses.flash()
+
+        strings = []
+        for bot in running_bots:
+            strings.append(("Liked by " + bot.get_username() + " in " + bot.get_site() + ": " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes())))
+
+        start_x = int((width // 5))
+        start_y = int((height // 3))
+
+        # Print
+        for i, string in enumerate(strings):
+            stdscr.addstr(start_y + (i*3), start_x, string)
+
+        # Refresh the screen        
+        stdscr.refresh()
+
+        time.sleep(0.5)
+
+
+
+
+def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: starting", i)
     for j in range(len(bots[i])):
+        running_bots[i] = bots[i][j]
         bots[i][j].run(pvals[i][j%(len(pvals[i]))])
+        finished_bots.append(bots[i][j])
         #set bigger waiting time in between bots ? like an hour
-        # time.sleep(3632)
-
-        #Search to "how to not interact with headless browsers"
-
-
     logging.info("Thread %s: finishing", i)
 
 
@@ -64,44 +103,54 @@ def bot_thread(bots, i, pvals):
 def run_bots(bots):
     pvals = list(params.values())
     threads=list()
+    running_bots = list()
+    finished_bots = list()
     for i in range(len(bots)):
+        running_bots.append(None)
         #separate in threads
-        x = threading.Thread(target=bot_thread, args=(bots, i, pvals), daemon=True)
+        x = threading.Thread(target=bot_thread, args=(bots, i, pvals, running_bots, finished_bots), daemon=True)
         threads.append(x)
         x.start()
-    
+
+    time.sleep(1)
+    curses.wrapper(interface, running_bots, threads)
+
     for thread in threads:
         thread.join()
 
 
 
+def get_bots():
+    igbots = []
+    for i in range(len(credentials['instagram'])): #instagram
+        igbots.append(InstagramBot(credentials['instagram'][i]['username'], credentials['instagram'][i]['password']))
+    igbots2 = []
+    for i in range(len(credentials['instagram2'])): #mom's instagram
+        igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password']))
 
 
 
 
-igbots = []
-for i in range(len(credentials['instagram'])): #instagram
-    igbots.append(InstagramBot(credentials['instagram'][i]['username'], credentials['instagram'][i]['password']))
+    bots = [
+        [SubmitHubBot(credentials['submithub']['username'], credentials['submithub']['password'])],
+        igbots,
+        igbots2
+    ]
 
-igbots2 = []
-for i in range(len(credentials['instagram2'])): #mom's instagram
-    igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password']))
+    return bots
 
-bots = [
-    [SubmitHubBot(credentials['submithub']['username'], credentials['submithub']['password'])],
-    igbots,
-    igbots2
-]
 
-format = "%(asctime)s: %(message)s"
-logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-logging.info("Main: Starting bot threads.")
-print()
-print("for ig liked posts:   first letter of username")
-print("for upvoted songs:                           !")
-print("for full iteration of hashtag:               o")
-print("for forced hashtag change due to error:      x")
-print()
-run_bots(bots)
-logging.info("Main: Finished all bot threads.")
+def main():
+    format = "%(asctime)s: %(message)s"
+    logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+    bots = get_bots()
+
+    logging.info("Main: Starting bot threads.")
+    run_bots(bots)
+    logging.info("Main: Finished all bot threads.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,36 +1,20 @@
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
+
+from Bot import Bot
+
 import os
 import time
 import random
 
-class InstagramBot:
+class InstagramBot(Bot):
 
     def __init__ (self, username, password):
-        self.username = username
-        self.password = password
+        super().__init__(username, password)        
 
-        self.chrome_options = webdriver.ChromeOptions()
-        self.chrome_options.add_argument("--headless")
-        self.chrome_options.add_argument("--window-size=1200x800")
-        
-        self.driver = None
-
+        self.site = "Instagram"
         self.base_url = "https://www.instagram.com/"
-
-        self.likes_given = 0
-        self.posts_seen = 0
-        
-    def quit(self):
-        print()
-        print("%-------------------------------------------------------%")
-        print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
-        print("%-------------------------------------------------------%")
-        self.driver.quit()
-
 
     def login(self):
         self.driver = webdriver.Chrome(executable_path="./chromedriver", options=self.chrome_options)
@@ -41,12 +25,12 @@ class InstagramBot:
         self.driver.find_element_by_name("password").send_keys(self.password)
         self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/article/div/div[1]/div/form/div[4]/button').click()
 
-        print("Logged in as " + self.username + " in " + self.base_url)
+        # print("Logged in as " + self.username + " in " + self.base_url)
 
         time.sleep(5)
 
 
-    def like_posts(self, hashtag, amount):
+    def like_posts(self, hashtag, amount, maxLikesPerHashtag):
         current_posts_seen = 0
         self.driver.get(self.base_url + 'explore/tags/' + hashtag)
         time.sleep(2)
@@ -54,7 +38,7 @@ class InstagramBot:
         time.sleep(5)
 
         #For each the post
-        while (current_posts_seen < (amount/len(hashtags))*4 and self.likes_given < amount):
+        while (current_posts_seen < maxLikesPerHashtag and self.likes_given < amount):
             self.posts_seen+=1
             current_posts_seen+=1
             chanceToLikePost = random.uniform(0.6, 0.85)
@@ -66,28 +50,30 @@ class InstagramBot:
                 waitTimeToLike = random.uniform(1, 3)
                 time.sleep(waitTimeToLike)
                 self.driver.find_element_by_class_name("wpO6b").click()
-                print(self.username[0:1], end="", flush=True)
+                # print(self.username[0:1], end="", flush=True)
             waitTimeToMoveOn = random.uniform(1, 3)
             time.sleep(waitTimeToMoveOn)
             self.driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
-        print("o", end="", flush=True)
+        # print("o", end="", flush=True)
         sleepTime = random.randrange(32, 64)
         time.sleep(sleepTime)
 
 
     def like_hashtags(self, hashtags, amount):
+        self.max_likes = amount
         while(self.likes_given<amount):
             for hashtag in hashtags:
                 try:
-                    self.like_posts(hashtag, amount)
+                    self.like_posts(hashtag, amount, (amount/len(hashtags))*4)
                 except NoSuchElementException: 
-                    print("x", end="", flush=True)
+                    # print("x", end="", flush=True)
+                    pass
             time.sleep(random.randrange(16, 64))
 
 
     def run(self, params):
         self.login()
-        print()
+        # print()
         try:
             self.like_hashtags(params[0], params[1])
         except ElementClickInterceptedException as e:
