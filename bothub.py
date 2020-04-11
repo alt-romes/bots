@@ -74,14 +74,14 @@ def interface(stdscr, running_bots, threads):
         for bot in running_bots:
             strings.append(("Liked by " + bot.get_username() + " in " + bot.get_site() + ": " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes())))
 
-        start_x = int((width // 5))
-        start_y = int((height // 3))
+        start_y = int((height // 2) - 2)
 
         # Print
         for i, string in enumerate(strings):
-            stdscr.addstr(start_y + (i*3), start_x, string)
+            start_x = int((width // 2) - (len(string) // 2) - len(string) % 2)
+            stdscr.addstr(start_y + (i*3), start_x, string[:width-1])
 
-        # Refresh the screen        
+        # Refresh the screen 
         stdscr.refresh()
 
         time.sleep(0.5)
