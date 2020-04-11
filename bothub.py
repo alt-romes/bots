@@ -19,14 +19,14 @@ params = {
 
     #SubmitHub: Number of songs to rate.
     'submithub': [
-        [100]
+        [5]
     ],
 
     #Instagram: Hashtags, Number of posts to like
     'instagram': [
         [
             ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'alternative', 'musician', "drawing", "instamusic", 'spotify'],
-            200
+            5
         ]
     ],
 
@@ -34,20 +34,20 @@ params = {
     'maeig': [
         [
             ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
-            200
+            5
         ],
         [
             (lambda x, y : (lambda z: random.sample(z, len(z)))(x+y)) (
                 ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
                 ["lifecoach", "mindsetcoach", "jungiancoach", "transformationalcoach", "bemindful", "womenempoweringwomen", "womensupportingwomen", "behappy", "loveandlight", "spiritjunkie", "personaldevelopment", "liveinthemoment", "personalgrowth", "bepresent", "lifecoach ", "lifegoals", "selfdevelopment", "findyourself", "soulsearching", "choosehappiness", "freespirit", "attitudeofgratitude", "goodvibes", "raiseyourvibration", "embracelife", "propelwomen", "womenintheworld", "bebold", "empoweredwomen", "happyheart ", "liveyourdreams", "celebratelife"]
             ),
-            200
+            5
         ]
     ]
 }
 
 
-def interface(stdscr, running_bots, threads):
+def interface(stdscr, running_bots, finished_bots, threads):
 
     #Use colors
     curses.start_color()
@@ -73,6 +73,8 @@ def interface(stdscr, running_bots, threads):
         strings = []
         for bot in running_bots:
             strings.append(("Liked by " + bot.get_username() + " in " + bot.get_site() + ": " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes())))
+        for bot in finished_bots:
+            strings.append(("Finished thread for " + bot.get_username() + " in " + bot.get_site() + ", did " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes()) + " likes"))
 
         start_y = int((height // 2) - 2)
 
@@ -113,7 +115,7 @@ def run_bots(bots):
         x.start()
 
     time.sleep(1)
-    curses.wrapper(interface, running_bots, threads)
+    curses.wrapper(interface, running_bots, finished_bots, threads)
 
     for thread in threads:
         thread.join()
