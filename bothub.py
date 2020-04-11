@@ -19,14 +19,14 @@ params = {
 
     #SubmitHub: Number of songs to rate.
     'submithub': [
-        [5]
+        [1]
     ],
 
     #Instagram: Hashtags, Number of posts to like
     'instagram': [
         [
             ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'alternative', 'musician', "drawing", "instamusic", 'spotify'],
-            5
+            1
         ]
     ],
 
@@ -34,14 +34,14 @@ params = {
     'maeig': [
         [
             ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
-            5
+            1
         ],
         [
             (lambda x, y : (lambda z: random.sample(z, len(z)))(x+y)) (
                 ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
                 ["lifecoach", "mindsetcoach", "jungiancoach", "transformationalcoach", "bemindful", "womenempoweringwomen", "womensupportingwomen", "behappy", "loveandlight", "spiritjunkie", "personaldevelopment", "liveinthemoment", "personalgrowth", "bepresent", "lifecoach ", "lifegoals", "selfdevelopment", "findyourself", "soulsearching", "choosehappiness", "freespirit", "attitudeofgratitude", "goodvibes", "raiseyourvibration", "embracelife", "propelwomen", "womenintheworld", "bebold", "empoweredwomen", "happyheart ", "liveyourdreams", "celebratelife"]
             ),
-            5
+            0
         ]
     ]
 }
@@ -52,6 +52,8 @@ def interface(stdscr, running_bots, finished_bots, threads):
     #Use colors
     curses.start_color()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
     stdscr.bkgd(' ', curses.color_pair(1) | curses.A_BOLD)
 
     #Set cursor invisible
@@ -70,18 +72,24 @@ def interface(stdscr, running_bots, finished_bots, threads):
         #curses.beep()
         #curses.flash()
 
-        strings = []
-        for bot in running_bots:
-            strings.append(("Liked by " + bot.get_username() + " in " + bot.get_site() + ": " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes())))
-        for bot in finished_bots:
-            strings.append(("Finished thread for " + bot.get_username() + " in " + bot.get_site() + ", did " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes()) + " likes"))
-
-        start_y = int((height // 2) - 2)
+        start_y = int((height // 3))
 
         # Print
-        for i, string in enumerate(strings):
+        for i, bot in enumerate(running_bots):
+            if bot!=None:
+                string = ("Ongoing: " + bot.get_username() + " in " + bot.get_site() + " [ " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes()) + " ]" )[:width-1]
+                start_x = int((width // 2) - (len(string) // 2) - len(string) % 2)
+                stdscr.addstr(start_y + (i*3), start_x, string)
+
+        start_y+=len(running_bots)*3
+        for i, bot in enumerate(finished_bots):
+            string = ("Finished: " + bot.get_username() + " in " + bot.get_site() + " [ " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes()) + " ]")[:width-1]
             start_x = int((width // 2) - (len(string) // 2) - len(string) % 2)
-            stdscr.addstr(start_y + (i*3), start_x, string[:width-1])
+            if(bot.get_likes_given()>=bot.get_max_likes()):
+                stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(2))
+            else:
+                stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(3)) 
+            
 
         # Refresh the screen 
         stdscr.refresh()
@@ -95,8 +103,10 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: starting", i)
     for j in range(len(bots[i])):
         running_bots[i] = bots[i][j]
+        #the % bit is to re-use the same parameter for multiple accounts
         bots[i][j].run(pvals[i][j%(len(pvals[i]))])
         finished_bots.append(bots[i][j])
+        running_bots[i] = None
         #set bigger waiting time in between bots ? like an hour
     logging.info("Thread %s: finishing", i)
 
@@ -107,6 +117,7 @@ def run_bots(bots):
     threads=list()
     running_bots = list()
     finished_bots = list()
+    
     for i in range(len(bots)):
         running_bots.append(None)
         #separate in threads
@@ -117,7 +128,7 @@ def run_bots(bots):
     time.sleep(1)
     curses.wrapper(interface, running_bots, finished_bots, threads)
 
-    for thread in threads:
+    for i, thread in enumerate(threads):
         thread.join()
 
 

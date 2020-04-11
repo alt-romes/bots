@@ -55,20 +55,24 @@ class InstagramBot(Bot):
             time.sleep(waitTimeToMoveOn)
             self.driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
         # print("o", end="", flush=True)
-        sleepTime = random.randrange(32, 64)
+        sleepTime = random.randrange(4,16)
         time.sleep(sleepTime)
 
 
     def like_hashtags(self, hashtags, amount):
         self.max_likes = amount
+        if(amount<=0):
+            return
         while(self.likes_given<amount):
             for hashtag in hashtags:
                 try:
-                    self.like_posts(hashtag, amount, (amount/len(hashtags))*4)
+                    self.like_posts(hashtag, amount, ((amount/len(hashtags))+1)*4)
                 except NoSuchElementException: 
                     # print("x", end="", flush=True)
                     pass
-            time.sleep(random.randrange(16, 64))
+                if(self.likes_given>=amount):
+                    break
+            time.sleep(random.randrange(4, 8))
 
 
     def run(self, params):

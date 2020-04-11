@@ -22,7 +22,7 @@ class Bot:
         self.driver = None
 
         self.likes_given = 0
-        self.max_likes = 0
+        self.max_likes = "-"
         self.posts_seen = 0
         
 
@@ -39,7 +39,6 @@ class Bot:
         return self.max_likes
 
     def quit(self):
-        print()
         print("%-------------------------------------------------------%")
         print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
         print("%-------------------------------------------------------%")

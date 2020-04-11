@@ -61,7 +61,7 @@ class SubmitHubBot(Bot):
                 
         self.driver.find_element_by_class_name('thumb-up').click()
         # print("!", end="", flush=True)
-        time.sleep(random.randrange(8, 12))
+        time.sleep(random.randrange(8, 16))
         self.driver.find_element_by_class_name('skip-next').click()
         self.likes_given+=1
 
@@ -79,5 +79,6 @@ class SubmitHubBot(Bot):
     def run(self, params):
         self.login()
         # print()
-        self.hot_or_not(params[0])
+        if(params[0]>0):
+            self.hot_or_not(params[0])
         self.quit()
