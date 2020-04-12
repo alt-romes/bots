@@ -60,7 +60,7 @@ class InstagramBot(Bot):
 
 
     def like_hashtags(self, hashtags, amount):
-        self.max_likes = random.randrange(int(amount*0.95), amount+1)
+        self.max_likes = random.randrange(int(amount*0.90), amount+1)
         mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
 

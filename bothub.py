@@ -32,7 +32,7 @@ params = {
     'instagram': [
         [
             ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
-            250
+            150
         ]
     ],
 
@@ -61,6 +61,7 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     stdscr.bkgd(' ', curses.color_pair(1) | curses.A_BOLD)
 
     #Set cursor invisible
@@ -92,7 +93,9 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
         for i, bot in enumerate(finished_bots):
             string = ("Finished: " + bot.get_username() + " in " + bot.get_site() + " [ " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes()) + " ]")[:width-1]
             start_x = int((width // 2) - (len(string) // 2) - len(string) % 2)
-            if(bot.get_likes_given()>=bot.get_max_likes()):
+            if(bot.get_max_likes()<=0):
+                stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(4)) 
+            elif(bot.get_likes_given()>=bot.get_max_likes()):
                 stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(2))
             else:
                 stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(3)) 

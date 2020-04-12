@@ -6,7 +6,7 @@ Rename `credentialssample.py` to `credentials.py`. Fill in with username and pas
 
 Running:
 
-```python
+```bash
 python bothub.py
 
 python bothub.py --no-interface
