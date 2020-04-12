@@ -35,7 +35,7 @@ class Bot:
         string = "Starting: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
         if self.get_max_likes()<=0:
             logging.info(bcolors.WARNING + string + bcolors.ENDC)
-        else
+        else:
             logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
 
     def get_username(self):
