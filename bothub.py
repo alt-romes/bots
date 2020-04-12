@@ -9,12 +9,13 @@ import sys
 #Bots
 from SubmitHubBot import SubmitHubBot
 from InstagramBot import InstagramBot
+from TwitterBot import TwitterBot
 
 #Credentials
 from credentials import credentials
 
 #Run with param --no-interface to hide interface
-
+#Run the crontab with param --no-interface --no-colors 
 
 
 
@@ -25,14 +26,22 @@ params = {
 
     #SubmitHub: Number of songs to rate.
     'submithub': [
-        [0]
+        [2] 
     ],
+
+    #Twitter: Hashtags and number of tweets to fav
+    'twitter': [
+        [
+            ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
+            20
+        ]
+    ], 
 
     #Instagram: Hashtags, Number of posts to like
     'instagram': [
         [
             ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
-            150
+            300
         ]
     ],
 
@@ -47,7 +56,7 @@ params = {
                 ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
                 ["lifecoach", "mindsetcoach", "jungiancoach", "transformationalcoach", "bemindful", "womenempoweringwomen", "womensupportingwomen", "behappy", "loveandlight", "spiritjunkie", "personaldevelopment", "liveinthemoment", "personalgrowth", "bepresent", "lifecoach ", "lifegoals", "selfdevelopment", "findyourself", "soulsearching", "choosehappiness", "freespirit", "attitudeofgratitude", "goodvibes", "raiseyourvibration", "embracelife", "propelwomen", "womenintheworld", "bebold", "empoweredwomen", "happyheart ", "liveyourdreams", "celebratelife"]
             ),
-            50
+            100
         ]
     ]
 }
@@ -104,7 +113,7 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
         # Refresh the screen 
         stdscr.refresh()
 
-        time.sleep(5)
+        time.sleep(1)
 
 
 
@@ -138,7 +147,7 @@ def run_bots(bots):
         threads.append(x)
         x.start()
 
-    if not (len(sys.argv)>1 and sys.argv[1]=="--no-interface"):
+    if not ("--no-interface" in sys.argv):
         curses.wrapper(interface, running_bots, finished_bots, threads)
 
     for i, thread in enumerate(threads):
@@ -154,11 +163,9 @@ def get_bots():
     for i in range(len(credentials['instagram2'])): #mom's instagram
         igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password']))
 
-
-
-
     bots = [
         [SubmitHubBot(credentials['submithub']['username'], credentials['submithub']['password'])],
+        [TwitterBot(credentials['twitter']['username'], credentials['twitter']['password'])],
         igbots,
         igbots2
     ]

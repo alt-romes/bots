@@ -17,7 +17,8 @@ class Bot:
         self.password = password
 
         self.chrome_options = webdriver.ChromeOptions()
-        self.chrome_options.add_argument("--headless")
+        if not ("--debug" in sys.argv):
+            self.chrome_options.add_argument("--headless")
         self.chrome_options.add_argument("--window-size=1200x800")
 
         self.username = username
@@ -34,7 +35,7 @@ class Bot:
 
     def print_bot_starting(self):
         string = "Starting: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
-        if(len(sys.argv)>2 and sys.argv[2]=="--no-colors"):
+        if("--no-colors" in sys.argv):
             logging.info(string)
         else:
             if self.get_max_likes()<1:
@@ -56,7 +57,7 @@ class Bot:
 
     def quit(self):
         string = ("Finished: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]")
-        if(len(sys.argv)>2 and sys.argv[2]=="--no-colors"):
+        if("--no-colors" in sys.argv):
             logging.info(string)
         else:
             if self.get_likes_given()<self.get_max_likes():

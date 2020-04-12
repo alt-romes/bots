@@ -30,7 +30,7 @@ class InstagramBot(Bot):
         time.sleep(5)
 
 
-    def like_posts(self, hashtag, amount, maxLikesPerHashtag):
+    def like_posts(self, hashtag, maxLikesPerHashtag):
         current_posts_seen = 0
         self.driver.get(self.base_url + 'explore/tags/' + hashtag)
         time.sleep(2)
@@ -38,7 +38,7 @@ class InstagramBot(Bot):
         time.sleep(5)
 
         #For each the post
-        while (current_posts_seen < maxLikesPerHashtag and self.likes_given < amount):
+        while (current_posts_seen < maxLikesPerHashtag and self.likes_given < self.max_likes):
             self.posts_seen+=1
             current_posts_seen+=1
             chanceToLikePost = random.uniform(0.6, 0.85)
@@ -59,20 +59,15 @@ class InstagramBot(Bot):
         time.sleep(sleepTime)
 
 
-    def like_hashtags(self, hashtags, amount):
-        self.max_likes = random.randrange(int(amount*0.90), amount+1)
+    def like_hashtags(self, hashtags):
         mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
 
-        super().print_bot_starting()
-
-        if(self.max_likes<=0):
-            return
-
+        
         while(self.likes_given<self.max_likes):
             for hashtag in hashtags:
                 try:
-                    self.like_posts(hashtag, self.max_likes, max_likes_per_hashtag)
+                    self.like_posts(hashtag, max_likes_per_hashtag)
                 except NoSuchElementException: 
                     # print("x", end="", flush=True)
                     pass
@@ -82,10 +77,18 @@ class InstagramBot(Bot):
 
 
     def run(self, params):
+
+        self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
+
+        super().print_bot_starting()
+
+        if(self.max_likes<=0):
+            return
+
         self.login()
         # print()
         try:
-            self.like_hashtags(params[0], params[1])
+            self.like_hashtags(params[0])
         except ElementClickInterceptedException as e:
             # print(e)
             pass

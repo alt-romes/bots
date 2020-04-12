@@ -66,17 +66,12 @@ class SubmitHubBot(Bot):
         self.likes_given+=1
 
 
-    def hot_or_not(self, amount):
-        self.max_likes = amount
+    def hot_or_not(self):
 
-        super().print_bot_starting()
-
-        if(amount<=0):
-            return
 
         self.driver.get(self.base_url + "hot-or-not")
 
-        while(self.likes_given<amount):
+        while(self.likes_given<self.max_likes):
             try:
                 self.like_music()
             except NoSuchElementException as e:
@@ -84,7 +79,14 @@ class SubmitHubBot(Bot):
                 pass
 
     def run(self, params):
+        self.max_likes = params[0]
+
+        super().print_bot_starting()
+
+        if(self.max_likes<=0):
+            return
+
         self.login()
         # print()
-        self.hot_or_not(params[0])
+        self.hot_or_not()
         self.quit()
