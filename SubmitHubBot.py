@@ -69,12 +69,12 @@ class SubmitHubBot(Bot):
     def hot_or_not(self, amount):
         self.max_likes = amount
 
+        super().print_bot_starting()
+
         if(amount<=0):
             return
 
         self.driver.get(self.base_url + "hot-or-not")
-
-        super().print_bot_starting()
 
         while(self.likes_given<amount):
             try:

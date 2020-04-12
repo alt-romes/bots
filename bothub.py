@@ -25,14 +25,14 @@ params = {
 
     #SubmitHub: Number of songs to rate.
     'submithub': [
-        [1]
+        [0]
     ],
 
     #Instagram: Hashtags, Number of posts to like
     'instagram': [
         [
             ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
-            2
+            250
         ]
     ],
 
@@ -40,14 +40,14 @@ params = {
     'maeig': [
         [
             ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
-            1
+            50
         ],
         [
             (lambda x, y : (lambda z: random.sample(z, len(z)))(x+y)) (
                 ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
                 ["lifecoach", "mindsetcoach", "jungiancoach", "transformationalcoach", "bemindful", "womenempoweringwomen", "womensupportingwomen", "behappy", "loveandlight", "spiritjunkie", "personaldevelopment", "liveinthemoment", "personalgrowth", "bepresent", "lifecoach ", "lifegoals", "selfdevelopment", "findyourself", "soulsearching", "choosehappiness", "freespirit", "attitudeofgratitude", "goodvibes", "raiseyourvibration", "embracelife", "propelwomen", "womenintheworld", "bebold", "empoweredwomen", "happyheart ", "liveyourdreams", "celebratelife"]
             ),
-            0
+            50
         ]
     ]
 }
@@ -110,6 +110,9 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: starting", i)
     for j in range(len(bots[i])):
         running_bots[i] = bots[i][j]
+
+        #i could call the print outs here, but instead i'm calling the print outs from Bot.py, when starting to run, and on quit
+
         #the % bit is to re-use the same parameter for multiple accounts
         bots[i][j].run(pvals[i][j%(len(pvals[i]))])
         finished_bots.append(bots[i][j])
