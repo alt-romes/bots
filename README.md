@@ -10,6 +10,8 @@ Running:
 python bothub.py
 
 python bothub.py --no-interface
+
+python bothub.py --no-interface --no-colors
 ```
 
-
+`--no-colors` can be used in a crontab, so the color codes aren't printed
