@@ -17,13 +17,13 @@ class InstagramBot(Bot):
         self.base_url = "https://www.instagram.com/"
 
     def login(self):
-        self.driver = webdriver.Chrome(executable_path="./chromedriver", options=self.chrome_options)
+        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
         self.driver.get(self.base_url + "accounts/login")
 
         time.sleep(5)
         self.driver.find_element_by_name("username").send_keys(self.username)
         self.driver.find_element_by_name("password").send_keys(self.password)
-        self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/article/div/div[1]/div/form/div[4]/button').click()
+        self.driver.find_element_by_css_selector('div>button[type="submit"]').click()
 
         # print("Logged in as " + self.username + " in " + self.base_url)
 
@@ -60,17 +60,23 @@ class InstagramBot(Bot):
 
 
     def like_hashtags(self, hashtags, amount):
-        self.max_likes = amount
-        if(amount<=0):
+        self.max_likes = random.randrange(int(amount*0.95), amount+1)
+        mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
+        max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
+
+        if(self.max_likes<=0):
             return
-        while(self.likes_given<amount):
+        
+        super().print_bot_starting()
+
+        while(self.likes_given<self.max_likes):
             for hashtag in hashtags:
                 try:
-                    self.like_posts(hashtag, amount, ((amount/len(hashtags))+1)*4)
+                    self.like_posts(hashtag, self.max_likes, max_likes_per_hashtag)
                 except NoSuchElementException: 
                     # print("x", end="", flush=True)
                     pass
-                if(self.likes_given>=amount):
+                if(self.likes_given>=self.max_likes):
                     break
             time.sleep(random.randrange(4, 8))
 

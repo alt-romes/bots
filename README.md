@@ -1,5 +1,15 @@
 # bots
 
-rename `credentialssample.py` to `credentials.py`. Fill in with username and passwords
+(check "how to write a good readme.md")
 
-run with **`python bothub.py`**
+Rename `credentialssample.py` to `credentials.py`. Fill in with username and passwords.
+
+Running:
+
+```python
+python bothub.py
+
+python bothub.py --no-interface
+```
+
+

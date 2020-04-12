@@ -3,9 +3,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 
+import logging
 import os
 import time
 import random
+
+from bcolors import bcolors
 
 class Bot:
     def __init__(self, username, password):
@@ -24,7 +27,16 @@ class Bot:
         self.likes_given = 0
         self.max_likes = "-"
         self.posts_seen = 0
-        
+
+        format = "%(asctime)s: %(message)s"
+        logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+    def print_bot_starting(self):
+        string = "Starting: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
+        if self.get_max_likes()<=0:
+            logging.info(bcolors.WARNING + string + bcolors.ENDC)
+        else
+            logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
 
     def get_username(self):
         return self.username
@@ -39,7 +51,12 @@ class Bot:
         return self.max_likes
 
     def quit(self):
-        print("%-------------------------------------------------------%")
-        print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
-        print("%-------------------------------------------------------%")
+        string = ("Finished: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]")
+        if self.get_likes_given()<self.get_max_likes():
+            logging.info(bcolors.FAIL + string + bcolors.ENDC)
+        else:
+            logging.info(bcolors.OKGREEN + string + bcolors.ENDC)
+        # print("%-------------------------------------------------------%")
+        # print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
+        # print("%-------------------------------------------------------%")
         self.driver.quit()

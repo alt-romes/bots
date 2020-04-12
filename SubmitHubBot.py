@@ -21,7 +21,7 @@ class SubmitHubBot(Bot):
 
 
     def login(self):
-        self.driver = webdriver.Chrome(executable_path="./chromedriver", options=self.chrome_options)
+        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
         self.driver.get(self.base_url + "login")
 
         time.sleep(5)
@@ -33,7 +33,7 @@ class SubmitHubBot(Bot):
         # print("Logged in as " + self.username + " in " + self.base_url)
 
     def listen_time(self):
-        return random.randrange(29, 61)
+        return random.randrange(49, 81)
     
     def like_music(self):
         time.sleep(5)
@@ -67,8 +67,15 @@ class SubmitHubBot(Bot):
 
 
     def hot_or_not(self, amount):
-        self.driver.get(self.base_url + "hot-or-not") 
         self.max_likes = amount
+
+        if(amount<=0):
+            return
+
+        self.driver.get(self.base_url + "hot-or-not")
+
+        super().print_bot_starting()
+
         while(self.likes_given<amount):
             try:
                 self.like_music()
@@ -79,6 +86,5 @@ class SubmitHubBot(Bot):
     def run(self, params):
         self.login()
         # print()
-        if(params[0]>0):
-            self.hot_or_not(params[0])
+        self.hot_or_not(params[0])
         self.quit()

@@ -4,6 +4,7 @@ import threading
 import logging
 import time
 import curses
+import sys
 
 #Bots
 from SubmitHubBot import SubmitHubBot
@@ -11,6 +12,11 @@ from InstagramBot import InstagramBot
 
 #Credentials
 from credentials import credentials
+
+#Run with param --no-interface to hide interface
+
+
+
 
 params = {
     #Each website has a list of lists of parameters, each list of parameters matches one account for that website.
@@ -25,8 +31,8 @@ params = {
     #Instagram: Hashtags, Number of posts to like
     'instagram': [
         [
-            ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'alternative', 'musician', "drawing", "instamusic", 'spotify'],
-            1
+            ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
+            2
         ]
     ],
 
@@ -47,7 +53,8 @@ params = {
 }
 
 
-def interface(stdscr, running_bots, finished_bots, threads):
+def interface(stdscr, running_bots, finished_bots, threads): #stdscr, 
+    time.sleep(1)
 
     #Use colors
     curses.start_color()
@@ -94,7 +101,7 @@ def interface(stdscr, running_bots, finished_bots, threads):
         # Refresh the screen 
         stdscr.refresh()
 
-        time.sleep(0.5)
+        time.sleep(5)
 
 
 
@@ -125,8 +132,8 @@ def run_bots(bots):
         threads.append(x)
         x.start()
 
-    time.sleep(1)
-    curses.wrapper(interface, running_bots, finished_bots, threads)
+    if not (len(sys.argv)>1 and sys.argv[1]=="--no-interface"):
+        curses.wrapper(interface, running_bots, finished_bots, threads)
 
     for i, thread in enumerate(threads):
         thread.join()
