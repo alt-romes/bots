@@ -3,6 +3,11 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import StaleElementReferenceException
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 import os
 import time
 import random
@@ -33,47 +38,33 @@ class TwitterBot(Bot):
     def like_posts(self, hashtag, maxLikesPerHashtag):
         current_posts_seen = 0
         self.driver.get(self.base_url + "hashtag/" + hashtag)
-        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
+        body = self.driver.find_element_by_css_selector('body')
         
+        
+        #Each iteration is a like
         while (current_posts_seen < maxLikesPerHashtag and self.likes_given < self.max_likes):
-            time.sleep(2)
-            last_height = self.driver.execute_script("return document.body.scrollHeight")
-            tweet_hearts = self.driver.find_elements_by_css_selector("div[data-testid='like']")
+            time.sleep(random.randrange(1,2))
 
-            for heart in tweet_hearts:
-                print(self.driver.execute_script("return arguments[0].getBoundingClientRect();", heart)['y'])
+            hearts = self.driver.find_elements_by_css_selector("div[data-testid='like']")
 
-            element_y = 0
-            for heart in tweet_hearts:
-
-                element_y += element_y - self.driver.execute_script("return arguments[0].getBoundingClientRect();", heart)['y']
-                print(element_y)
-                self.driver.execute_script("window.scrollTo(0, {})".format(element_y-107)) #200 for twitter's top nav bar 
-
-                time.sleep(5)
-
-                self.posts_seen += 1
-                current_posts_seen += 1
-
-                chanceToLikePost = random.uniform(0.6, 0.85)
-                r = random.random()
-
-                # if(r <= chanceToLikePost):
-
-                self.likes_given+=1
-
-                waitTimeToLike = random.uniform(1, 3)
-                time.sleep(waitTimeToLike)
-
-                heart.click()
-
-                waitTimeToMoveOn = random.uniform(0.2, 0.6)
-                time.sleep(waitTimeToMoveOn)
-
-
-        # self.driver.execute_script("window.scrollTo(0, {})".format(last_height+500))
+            liked = False
+            while not liked:
+                if len(hearts)>0:
+                    try:
+                        hearts[0].click()
+                    except ElementClickInterceptedException:
+                        pass
+                    finally:
+                        self.posts_seen += 1
+                        current_posts_seen += 1
+                        self.likes_given+=1
+                        liked=True
+                else:
+                    hearts = self.driver.find_elements_by_css_selector("div[data-testid='like']")
+                body.send_keys(Keys.DOWN)
+                
         time.sleep(3)
-        new_height = self.driver.execute_script("return document.body.scrollHeight")
 
         
 
@@ -100,6 +91,6 @@ class TwitterBot(Bot):
         if(self.max_likes<=0):
             return
 
-        # self.login()
-        # self.like_hashtags(params[0])
+        self.login()
+        self.like_hashtags(params[0])
         self.quit()

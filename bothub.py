@@ -12,54 +12,17 @@ from InstagramBot import InstagramBot
 from TwitterBot import TwitterBot
 
 #Credentials
-from credentials import credentials
+from config import credentials
+
+#Params
+from config import params
 
 #Run with param --no-interface to hide interface
 #Run the crontab with param --no-interface --no-colors 
 
 
 
-params = {
-    #Each website has a list of lists of parameters, each list of parameters matches one account for that website.
-    #A list of parameters is passed to the function bot.run(), and each element is a required argument for that said bot.
-    #You can have just one list of parameters for more than one account.
 
-    #SubmitHub: Number of songs to rate.
-    'submithub': [
-        [2] 
-    ],
-
-    #Twitter: Hashtags and number of tweets to fav
-    'twitter': [
-        [
-            ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
-            20
-        ]
-    ], 
-
-    #Instagram: Hashtags, Number of posts to like
-    'instagram': [
-        [
-            ['shoegaze', 'dreampop', 'experimental', 'soundscapes', "album", 'indie', 'alternative', "homestudio", "recording", "record", "altrock", 'music', 'artist', 'art', 'musician', "drawing", "instamusic", 'spotify'],
-            300
-        ]
-    ],
-
-    #Instagram da Mae: Mesma ordem
-    'maeig': [
-        [
-            ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
-            50
-        ],
-        [
-            (lambda x, y : (lambda z: random.sample(z, len(z)))(x+y)) (
-                ["lookbook", "simplelook", "ootd", "outfitoftheday", "wiwt", "lookoftheday", "picoftheday", "simplestyle", "simpleoutfit", "styleover40", "instafashion", "instastyle", "imageconsultant", "personalstylist", "styleinspiration", "bossmom", "momof3", "consultoriadeimagem", "coachingdeimagem", "coachdeimagem", "stylist", "wiwt", "ootd", "outfitoftheday", "lookoftheday", "lookbook", "simplelook  ", "simplestyle", "simpleoutfit", "picoftheday", "instafashion", "instastyle ", "styleover40", "imageconsultant", "personalstylist", "fashionstylist", "fashionblogger", "bloguerdemoda ", "consultoriadeimagem", "coachingdeimagem", "bloguerportuguesa", "consultoradeimagem", "transformationalcoach", "jungiancoach", "stylediary", "lifecoach", "bossmom", "momof3"],
-                ["lifecoach", "mindsetcoach", "jungiancoach", "transformationalcoach", "bemindful", "womenempoweringwomen", "womensupportingwomen", "behappy", "loveandlight", "spiritjunkie", "personaldevelopment", "liveinthemoment", "personalgrowth", "bepresent", "lifecoach ", "lifegoals", "selfdevelopment", "findyourself", "soulsearching", "choosehappiness", "freespirit", "attitudeofgratitude", "goodvibes", "raiseyourvibration", "embracelife", "propelwomen", "womenintheworld", "bebold", "empoweredwomen", "happyheart ", "liveyourdreams", "celebratelife"]
-            ),
-            100
-        ]
-    ]
-}
 
 
 def interface(stdscr, running_bots, finished_bots, threads): #stdscr, 
@@ -156,16 +119,20 @@ def run_bots(bots):
 
 
 def get_bots():
+
     igbots = []
     for i in range(len(credentials['instagram'])): #instagram
         igbots.append(InstagramBot(credentials['instagram'][i]['username'], credentials['instagram'][i]['password']))
     igbots2 = []
     for i in range(len(credentials['instagram2'])): #mom's instagram
         igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password']))
+    ttbots = []
+    for i in range(len(credentials['twitter'])):
+        ttbots.append(TwitterBot(credentials['twitter'][i]['username'], credentials['twitter'][i]['password']))
 
     bots = [
         [SubmitHubBot(credentials['submithub']['username'], credentials['submithub']['password'])],
-        [TwitterBot(credentials['twitter']['username'], credentials['twitter']['password'])],
+        ttbots,
         igbots,
         igbots2
     ]

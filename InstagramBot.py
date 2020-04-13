@@ -41,11 +41,10 @@ class InstagramBot(Bot):
         while (current_posts_seen < maxLikesPerHashtag and self.likes_given < self.max_likes):
             self.posts_seen+=1
             current_posts_seen+=1
-            chanceToLikePost = random.uniform(0.6, 0.85)
-            r = random.random()
+            
             time.sleep(2)
             isLiked = self.driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]')!=[]
-            if(r <= chanceToLikePost and not isLiked):
+            if(self.should_like_post() and not isLiked):
                 self.likes_given+=1
                 waitTimeToLike = random.uniform(1, 3)
                 time.sleep(waitTimeToLike)

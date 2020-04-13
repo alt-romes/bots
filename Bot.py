@@ -55,6 +55,11 @@ class Bot:
     def get_max_likes(self):
         return self.max_likes
 
+    def should_like_post(self):
+        chanceToLikePost = random.uniform(0.6, 0.85)
+        r = random.random()
+        return r <= chanceToLikePost
+
     def quit(self):
         string = ("Finished: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]")
         if("--no-colors" in sys.argv):

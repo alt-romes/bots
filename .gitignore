@@ -1,4 +1,6 @@
 .gitignore
+config.py
 credentials.py
 __pycache__/credentials.cpython-37.pyc
+__pycache__/config.cpython-37.pyc
 .DS_Store
