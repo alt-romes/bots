@@ -11,7 +11,9 @@ import sys
 
 from bcolors import bcolors
 
+
 class Bot:
+
     def __init__(self, username, password):
         self.username = username
         self.password = password
@@ -32,6 +34,8 @@ class Bot:
 
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+
 
     def print_bot_starting(self):
         string = "Starting: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
@@ -74,4 +78,5 @@ class Bot:
         # print("%-------------------------------------------------------%")
         # print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
         # print("%-------------------------------------------------------%")
+
         self.driver.quit()

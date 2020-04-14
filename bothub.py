@@ -6,6 +6,9 @@ import time
 import curses
 import sys
 
+import sqlite3
+from sqlite3 import Error
+
 #Bots
 from SubmitHubBot import SubmitHubBot
 from InstagramBot import InstagramBot
@@ -19,7 +22,6 @@ from config import params
 
 #Run with param --no-interface to hide interface
 #Run the crontab with param --no-interface --no-colors 
-
 
 
 
@@ -46,7 +48,6 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
         stdscr.clear()
 
         height, width = stdscr.getmaxyx()
-
 
         # Remember this, it's pretty funny
         #curses.beep()
@@ -80,7 +81,6 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
 
 
 
-
 def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: starting", i)
     for j in range(len(bots[i])):
@@ -96,8 +96,7 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: finishing", i)
 
 
-
-def run_bots(bots):
+def run_bots(bots, connection):
     pvals = list(params.values())
     threads=list()
     running_bots = list()
@@ -116,7 +115,82 @@ def run_bots(bots):
     for i, thread in enumerate(threads):
         thread.join()
 
+    
 
+
+def create_table(conn, create_table_sql):
+    print("create table")
+    """ create a table from the create_table_sql statement
+    :param conn: Connection object
+    :param create_table_sql: a CREATE TABLE statement
+    :return:
+    """
+    try:
+        c = conn.cursor()
+        c.execute(create_table_sql)
+    except Error as e:
+        print(e)
+
+
+def create_database(db_file):
+    print("teste")
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+    except Error as e:
+        print(e)
+        return
+
+    if conn is not None:
+
+        accounts_table = """ CREATE TABLE IF NOT EXISTS Accounts (
+                                            id integer PRIMARY KEY,
+                                            username text NOT NULL,
+                                            platform text NOT NULL
+                                        ); """
+
+        likejobs_table = """ CREATE TABLE IF NOT EXISTS LikeJobs (
+                                            acc_id integer,
+                                            time_start text NOT NULL,
+                                            time_end text NOT NULL,
+                                            likes_given integer,
+                                            max_likes integer,
+                                            posts_seen integer,
+                                            PRIMARY KEY (acc_id, time_start),
+                                            FOREIGN KEY (acc_id) REFERENCES Accounts (id)
+                                        ); """ 
+
+        acchashtags_table = """ CREATE TABLE IF NOT EXISTS AccHashtags (
+                                            acc_id integer PRIMARY KEY,
+                                            hashtag text NOT NULL,
+                                            FOREIGN KEY (acc_id) REFERENCES Accounts (id)
+                                        ); """
+
+        likedposts_table = """ CREATE TABLE IF NOT EXISTS LikedPosts (
+                                            acc_id integer,
+                                            post_id integer,
+                                            user_liked text NOT NULL,
+                                            time text NOT NULL,
+                                            PRIMARY KEY (acc_id, post_id),
+                                            FOREIGN KEY (acc_id) REFERENCES Accounts (id)
+                                        ); """
+
+        likedpostshashtags_table = """ CREATE TABLE IF NOT EXISTS LikedPostsHashtags (
+                                            post_id integer PRIMARY KEY,
+                                            hashtag text NOT NULL,
+                                            FOREIGN KEY (post_id) REFERENCES LikedPosts (post_id)
+                                        ); """
+
+        create_table(conn, accounts_table)
+        create_table(conn, likejobs_table)
+        create_table(conn, acchashtags_table)
+        create_table(conn, likedposts_table)
+        create_table(conn, likedpostshashtags_table)
+    
+    else:
+        print("Error connecting to database!")
+
+    return conn
 
 def get_bots():
 
@@ -145,11 +219,18 @@ def main():
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
+    conn = create_database(r"dbbots.db")
+
     bots = get_bots()
 
     logging.info("Main: Starting bot threads.")
-    run_bots(bots)
+    # run_bots(bots, conn)
     logging.info("Main: Finished all bot threads.")
+
+    conn.close()
+
+    logging.info("Closed database. End program.")
+
 
 
 if __name__ == "__main__":
