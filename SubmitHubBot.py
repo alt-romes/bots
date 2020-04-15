@@ -12,19 +12,21 @@ import random
 class SubmitHubBot(Bot):
 
     def __init__ (self, username, password):
+        self.platform = "SubmitHub"
+        self.base_url = "https://www.submithub.com/"
         super().__init__(username, password)
 
         self.chrome_options.add_argument("--mute-audio")
 
-        self.platform = "SubmitHub"
-        self.base_url = "https://www.submithub.com/"
-
 
     def login(self):
-        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
-        self.driver.get(self.base_url + "login")
-
+        login_url = self.base_url + "login"
+        self.driver.get(login_url)
         time.sleep(5)
+
+        if (self.driver.current_url != login_url):
+            return
+
         self.driver.find_element_by_id("usernameOrEmail").send_keys(self.username)
         self.driver.find_element_by_id("password").send_keys(self.password)
         self.driver.find_element_by_xpath('//*[@id="my-account-login"]/form/div[3]/button[1]').click()
@@ -88,6 +90,8 @@ class SubmitHubBot(Bot):
         if(self.max_likes<=0):
             return
 
+        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+        
         self.login()
         # print()
         self.hot_or_not()

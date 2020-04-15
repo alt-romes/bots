@@ -2,6 +2,9 @@
 dbbots.db
 config.py
 credentials.py
+profiles
+profiles/*
+__pycache__/*
 __pycache__/credentials.cpython-37.pyc
 __pycache__/config.cpython-37.pyc
 .DS_Store

@@ -17,17 +17,21 @@ from Bot import Bot
 class TwitterBot(Bot):
 
     def __init__ (self, username, password):
-        super().__init__(username, password)        
-
         self.platform = "Twitter"
         self.base_url = "https://www.twitter.com/"
 
+        super().__init__(username, password)        
+
 
     def login(self):
-        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
-        self.driver.get(self.base_url + "login")
+        login_url = self.base_url + "login"
+        self.driver.get(login_url)
 
-        time.sleep(1)
+        time.sleep(5)
+
+        if (self.driver.current_url != login_url):
+            return        
+
         self.driver.find_element_by_name("session[username_or_email]").send_keys(self.username)
         self.driver.find_element_by_name("session[password]").send_keys(self.password)
         self.driver.find_element_by_css_selector('div[role="button"][data-testid="LoginForm_Login_Button"]').click()
@@ -86,12 +90,15 @@ class TwitterBot(Bot):
 
     def run(self, params):
 
+
         self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
 
         super().print_bot_starting()
 
         if(self.max_likes<=0):
             return
+
+        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
 
         self.login()
         self.like_hashtags(params[0])

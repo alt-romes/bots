@@ -20,9 +20,12 @@ class Bot:
         self.password = password
 
         self.chrome_options = webdriver.ChromeOptions()
+
         if not ("--debug" in sys.argv):
             self.chrome_options.add_argument("--headless")
         self.chrome_options.add_argument("--window-size=1200x800")
+
+        self.chrome_options.add_argument("--user-data-dir=/Users/romes/everything-else/botdev/organized/likebots/profiles/"+self.platform+"/"+username)
 
         self.username = username
         self.password = password

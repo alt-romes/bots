@@ -6,13 +6,13 @@ import time
 import curses
 import sys
 
-import sqlite3
-from sqlite3 import Error
-
 #Bots
 from SubmitHubBot import SubmitHubBot
 from InstagramBot import InstagramBot
 from TwitterBot import TwitterBot
+
+#Database module
+from Database import Database
 
 #Credentials
 from config import credentials
@@ -22,139 +22,6 @@ from config import params
 
 #Run with param --no-interface to hide interface
 #Run the crontab with param --no-interface --no-colors 
-
-def add_account_hashtag(conn, acchashtag):
-
-    insert = ''' INSERT OR IGNORE INTO accHashtags(username, platform, hashtag, followers_revenue)
-              VALUES(?, ?, ?, ?)
-                '''
-
-    cur = conn.cursor()
-    cur.execute(insert, acchashtag)
-    conn.commit()    
-
-
-def add_post_hashtag(conn, posthashtag):
-
-    insert = ''' INSERT OR IGNORE INTO likedPostsHashtags(post_id, hashtag)
-              VALUES(?, ?)
-                '''
-
-    cur = conn.cursor()
-    cur.execute(insert, posthashtag)
-    conn.commit()
-
-
-def create_liked_post(conn, liked_post):
-
-    insert = ''' INSERT INTO likedPosts(username, platform, op, time)
-              VALUES(?, ?, ?, ?)
-                '''
-
-    cur = conn.cursor()
-    cur.execute(insert, liked_post)
-    conn.commit()
-    return cur.lastrowid
-
-
-def create_likejob(conn, likejob):
-
-    insert = ''' INSERT INTO likeJobs(username, platform, likes_given, max_likes, status, time_start, time_end, posts_seen)
-              VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-                '''
-
-    cur = conn.cursor()
-    cur.execute(insert, likejob)
-    conn.commit()
-
-    
-def create_account(conn, account):
-
-    insert = ''' INSERT OR IGNORE INTO accounts(username, platform)
-              VALUES(?, ?)
-                '''
-
-    cur = conn.cursor()
-    cur.execute(insert, account)
-    conn.commit()
-
-
-def create_table(conn, create_table_sql):
-    """ create a table from the create_table_sql statement
-    :param conn: Connection object
-    :param create_table_sql: a CREATE TABLE statement
-    :return:
-    """
-    c = conn.cursor()
-    c.execute(create_table_sql)
-    conn.commit()
-
-
-def create_database(db_file):
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-    except Error as e:
-        print(e)
-        return
-
-    if conn is not None:
-
-        accounts_table = """ CREATE TABLE IF NOT EXISTS accounts (
-                                            username text NOT NULL,
-                                            platform text NOT NULL,
-                                            PRIMARY KEY(username, platform)
-                                        ); """
-
-        likejobs_table = """ CREATE TABLE IF NOT EXISTS likeJobs (
-                                            username text NOT NULL,
-                                            platform text NOT NULL,
-                                            likes_given integer,
-                                            max_likes integer,
-                                            status text NOT NULL,
-                                            time_start timestamp,
-                                            time_end timestamp,
-                                            posts_seen integer,
-                                            PRIMARY KEY (username, platform, time_start),
-                                            FOREIGN KEY (username, platform) REFERENCES accounts (username, platform)
-                                        ); """ 
-
-        acchashtags_table = """ CREATE TABLE IF NOT EXISTS accHashtags (
-                                            username text NOT NULL,
-                                            platform text NOT NULL,
-                                            hashtag text NOT NULL,
-                                            followers_revenue integer,
-                                            PRIMARY KEY (username, platform, hashtag),
-                                            FOREIGN KEY (username, platform) REFERENCES accounts (username, platform)
-                                        ); """
-
-        likedposts_table = """ CREATE TABLE IF NOT EXISTS likedPosts (
-                                            post_id integer,
-                                            username text NOT NULL,
-                                            platform text NOT NULL,
-                                            op text NOT NULL,
-                                            time timestamp,
-                                            PRIMARY KEY (post_id),
-                                            FOREIGN KEY (username, platform) REFERENCES accounts (username, platform)
-                                        ); """
-
-        likedpostshashtags_table = """ CREATE TABLE IF NOT EXISTS likedPostsHashtags (
-                                            post_id integer,
-                                            hashtag text NOT NULL,
-                                            FOREIGN KEY (post_id) REFERENCES likedPosts (post_id),
-                                            PRIMARY KEY (post_id, hashtag)
-                                        ); """
-
-        create_table(conn, accounts_table)
-        create_table(conn, likejobs_table)
-        create_table(conn, acchashtags_table)
-        create_table(conn, likedposts_table)
-        create_table(conn, likedpostshashtags_table)
-    
-    else:
-        logging.info("Error connecting to database!")
-
-    return conn
 
 
 def interface(stdscr, running_bots, finished_bots, threads): #stdscr, 
@@ -226,7 +93,7 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: finishing", i)
 
 
-def run_bots(bots, conn):
+def run_bots(bots, db):
     pvals = list(params.values())
     threads=list()
     running_bots = list()
@@ -249,18 +116,18 @@ def run_bots(bots, conn):
     for bot in finished_bots:
         if bot.get_max_likes() > 0:
             likejob = (bot.get_username(), bot.get_platform(), bot.get_likes_given(), bot.get_max_likes(), bot.get_status(), bot.get_time_started(), bot.get_time_ended(), bot.get_posts_seen())
-            create_likejob(conn, likejob)
+            db.create_likejob(likejob)
             liked_posts = bot.get_posts_liked()
             if len(liked_posts)>0:
                 for post in liked_posts:
                     liked_post = (bot.get_username(), bot.get_platform(), post[0], post[1])
-                    post_id = create_liked_post(conn, liked_post)
+                    post_id = db.create_liked_post(liked_post)
                     for hashtag in post[2]:
-                        add_post_hashtag(conn, (post_id, hashtag))
+                        db.add_post_hashtag((post_id, hashtag))
 
 
 
-def get_bots(conn):
+def get_bots(db):
 
     igbots = []
     for i in range(len(credentials['instagram'])): #instagram
@@ -281,13 +148,13 @@ def get_bots(conn):
 
     for botlist in bots:
         for bot in botlist:
-            create_account(conn, (bot.get_username(), bot.get_platform()))
+            db.create_account((bot.get_username(), bot.get_platform()))
 
     pvals = list(params.values()) 
     for i in range(1, len(pvals)):
         for j in range(len(pvals[i])):
             for hashtag in pvals[i][j][0]:
-                add_account_hashtag(conn, (bots[i][j].get_username(), bots[i][j].get_platform(), hashtag, 0))
+                db.add_account_hashtag((bots[i][j].get_username(), bots[i][j].get_platform(), hashtag, 0))
 
     return bots
 
@@ -297,15 +164,15 @@ def main():
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-    conn = create_database("/Users/romes/everything-else/botdev/organized/likebots/dbbots.db") #
+    db = Database("/Users/romes/everything-else/botdev/organized/likebots/dbbots.db")
 
-    bots = get_bots(conn)
+    bots = get_bots(db)
 
     logging.info("Main: Starting bot threads.")
-    run_bots(bots, conn)
+    run_bots(bots, db)
     logging.info("Main: Finished all bot threads.")
 
-    conn.close()
+    db.close()
 
     logging.info("Closed database. End program.")
 

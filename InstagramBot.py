@@ -12,16 +12,20 @@ import random
 class InstagramBot(Bot):
 
     def __init__ (self, username, password):
-        super().__init__(username, password)        
-
         self.platform = "Instagram"
         self.base_url = "https://www.instagram.com/"
 
+        super().__init__(username, password) 
+
     def login(self):
-        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
-        self.driver.get(self.base_url + "accounts/login")
+        login_url = self.base_url + "accounts/login"
+        self.driver.get(login_url)
 
         time.sleep(5)
+
+        if (self.driver.current_url != login_url):
+            return
+
         self.driver.find_element_by_name("username").send_keys(self.username)
         self.driver.find_element_by_name("password").send_keys(self.password)
         self.driver.find_element_by_css_selector('div>button[type="submit"]').click()
@@ -95,6 +99,8 @@ class InstagramBot(Bot):
 
         if(self.max_likes<=0):
             return
+
+        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
 
         self.login()
         # print()
