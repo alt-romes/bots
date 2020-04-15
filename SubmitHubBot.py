@@ -32,7 +32,6 @@ class SubmitHubBot(Bot):
         self.driver.find_element_by_xpath('//*[@id="my-account-login"]/form/div[3]/button[1]').click()
 
         time.sleep(5)
-        # print("Logged in as " + self.username + " in " + self.base_url)
 
     def listen_time(self):
         return random.randrange(49, 81)
@@ -62,7 +61,6 @@ class SubmitHubBot(Bot):
                 time.sleep(1)
                 
         self.driver.find_element_by_class_name('thumb-up').click()
-        # print("!", end="", flush=True)
         time.sleep(random.randrange(8, 16))
         self.driver.find_element_by_class_name('skip-next').click()
         self.likes_given+=1
@@ -77,7 +75,6 @@ class SubmitHubBot(Bot):
             try:
                 self.like_music()
             except NoSuchElementException as e:
-                # print(e)
                 self.status = "NoSuchElementException"
             finally:
                 self.status = "Success"
@@ -93,6 +90,5 @@ class SubmitHubBot(Bot):
         self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
         
         self.login()
-        # print()
         self.hot_or_not()
         self.quit()

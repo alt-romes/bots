@@ -5,8 +5,8 @@ import sqlite3
 class Database:
 
     def __init__(self, path):
-        self.conn = None
-        self.create_database(path)
+        self.conn = sqlite3.connect(path)
+        self.create_database()
 
     def add_account_hashtag(self, acchashtag):
 
@@ -32,8 +32,8 @@ class Database:
 
     def create_liked_post(self, liked_post):
 
-        insert = ''' INSERT INTO likedPosts(username, platform, op, time)
-                VALUES(?, ?, ?, ?)
+        insert = ''' INSERT INTO likedPosts(username, platform, op, time, found_in)
+                VALUES(?, ?, ?, ?, ?)
                     '''
 
         cur = self.conn.cursor()
@@ -75,8 +75,7 @@ class Database:
         self.conn.commit()
 
 
-    def create_database(self, db_file):
-        self.conn = sqlite3.connect(db_file)
+    def create_database(self):
 
         if self.conn is not None:
 
@@ -114,6 +113,7 @@ class Database:
                                                 platform text NOT NULL,
                                                 op text NOT NULL,
                                                 time timestamp,
+                                                found_in text NOT NULL,
                                                 PRIMARY KEY (post_id),
                                                 FOREIGN KEY (username, platform) REFERENCES accounts (username, platform)
                                             ); """

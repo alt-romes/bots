@@ -61,7 +61,7 @@ class InstagramBot(Bot):
                 tags = self.driver.find_element_by_class_name("C4VMK").text
                 hashtags = list({tag.strip("#") for tag in tags.split() if tag.startswith("#")})
 
-                self.posts_liked.append((op, time_liked, hashtags))
+                self.posts_liked.append((op, time_liked, hashtag, hashtags))
 
                 self.driver.find_element_by_class_name("wpO6b").click()
                 # print(self.username[0:1], end="", flush=True)

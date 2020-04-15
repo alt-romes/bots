@@ -12,6 +12,7 @@ import sys
 
 from bcolors import bcolors
 
+from Database import Database
 
 class Bot:
 
@@ -32,11 +33,11 @@ class Bot:
         
         self.driver = None
 
+        self.posts_liked = []
         self.likes_given = 0
         self.max_likes = "-"
         self.posts_seen = 0
 
-        self.posts_liked = []
         self.time_started = datetime.datetime.now()
         self.time_ended = 0
 
@@ -44,7 +45,6 @@ class Bot:
 
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
-
 
 
     def print_bot_starting(self):
@@ -56,7 +56,7 @@ class Bot:
                 logging.info(bcolors.WARNING + string + bcolors.ENDC)
             else:
                 logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
-
+                
     def get_posts_liked(self):
         return self.posts_liked
 

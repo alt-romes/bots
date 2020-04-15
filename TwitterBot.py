@@ -78,6 +78,8 @@ class TwitterBot(Bot):
         mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
 
+        random.shuffle(hashtags)
+
         while(self.likes_given<self.max_likes):
             for hashtag in hashtags:
                 self.like_posts(hashtag, max_likes_per_hashtag)
