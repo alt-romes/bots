@@ -115,11 +115,23 @@ def run_bots(bots, connection):
     for i, thread in enumerate(threads):
         thread.join()
 
+    #add finished_bots to database
+
+
+
+
+
     
+def create_account(conn, account):
+
+    sql = ''' INSERT INTO projects(username, platform)
+              VALUES(?, ?)'''
+    cur = conn.cursor()
+    cur.execute(sql, account)
+    return cur.lastrowid
 
 
 def create_table(conn, create_table_sql):
-    print("create table")
     """ create a table from the create_table_sql statement
     :param conn: Connection object
     :param create_table_sql: a CREATE TABLE statement
@@ -133,7 +145,6 @@ def create_table(conn, create_table_sql):
 
 
 def create_database(db_file):
-    print("teste")
     conn = None
     try:
         conn = sqlite3.connect(db_file)
@@ -143,13 +154,13 @@ def create_database(db_file):
 
     if conn is not None:
 
-        accounts_table = """ CREATE TABLE IF NOT EXISTS Accounts (
+        accounts_table = """ CREATE TABLE IF NOT EXISTS accounts (
                                             id integer PRIMARY KEY,
                                             username text NOT NULL,
                                             platform text NOT NULL
                                         ); """
 
-        likejobs_table = """ CREATE TABLE IF NOT EXISTS LikeJobs (
+        likejobs_table = """ CREATE TABLE IF NOT EXISTS likeJobs (
                                             acc_id integer,
                                             time_start text NOT NULL,
                                             time_end text NOT NULL,
@@ -160,13 +171,13 @@ def create_database(db_file):
                                             FOREIGN KEY (acc_id) REFERENCES Accounts (id)
                                         ); """ 
 
-        acchashtags_table = """ CREATE TABLE IF NOT EXISTS AccHashtags (
+        acchashtags_table = """ CREATE TABLE IF NOT EXISTS accHashtags (
                                             acc_id integer PRIMARY KEY,
                                             hashtag text NOT NULL,
                                             FOREIGN KEY (acc_id) REFERENCES Accounts (id)
                                         ); """
 
-        likedposts_table = """ CREATE TABLE IF NOT EXISTS LikedPosts (
+        likedposts_table = """ CREATE TABLE IF NOT EXISTS likedPosts (
                                             acc_id integer,
                                             post_id integer,
                                             user_liked text NOT NULL,
@@ -175,7 +186,7 @@ def create_database(db_file):
                                             FOREIGN KEY (acc_id) REFERENCES Accounts (id)
                                         ); """
 
-        likedpostshashtags_table = """ CREATE TABLE IF NOT EXISTS LikedPostsHashtags (
+        likedpostshashtags_table = """ CREATE TABLE IF NOT EXISTS likedPostsHashtags (
                                             post_id integer PRIMARY KEY,
                                             hashtag text NOT NULL,
                                             FOREIGN KEY (post_id) REFERENCES LikedPosts (post_id)
@@ -192,7 +203,7 @@ def create_database(db_file):
 
     return conn
 
-def get_bots():
+def get_bots(conn):
 
     igbots = []
     for i in range(len(credentials['instagram'])): #instagram
@@ -211,6 +222,10 @@ def get_bots():
         igbots2
     ]
 
+    for botlist in bots:
+        for bot in botlist:
+            pass
+
     return bots
 
 
@@ -219,12 +234,12 @@ def main():
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-    conn = create_database(r"dbbots.db")
+    conn = create_database("/Users/romes/everything-else/botdev/organized/likebots/dbbots.db")
 
-    bots = get_bots()
+    bots = get_bots(conn)
 
     logging.info("Main: Starting bot threads.")
-    # run_bots(bots, conn)
+    run_bots(bots, 0) #conn
     logging.info("Main: Finished all bot threads.")
 
     conn.close()

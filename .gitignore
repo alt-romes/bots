@@ -1,4 +1,5 @@
 .gitignore
+dbbots.db
 config.py
 credentials.py
 __pycache__/credentials.cpython-37.pyc

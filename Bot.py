@@ -32,6 +32,10 @@ class Bot:
         self.max_likes = "-"
         self.posts_seen = 0
 
+        self.posts_liked = []
+        self.time_started = 0
+        self.time_ended = 0
+
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
@@ -75,8 +79,5 @@ class Bot:
                 logging.info(bcolors.WARNING + string + bcolors.ENDC)
             else:
                 logging.info(bcolors.OKGREEN + string + bcolors.ENDC)
-        # print("%-------------------------------------------------------%")
-        # print("Liked " + str(self.likes_given) + " posts for account " + self.username + " in " + self.base_url)
-        # print("%-------------------------------------------------------%")
 
         self.driver.quit()
