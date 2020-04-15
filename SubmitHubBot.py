@@ -16,7 +16,7 @@ class SubmitHubBot(Bot):
 
         self.chrome_options.add_argument("--mute-audio")
 
-        self.site = "SubmitHub"
+        self.platform = "SubmitHub"
         self.base_url = "https://www.submithub.com/"
 
 
@@ -76,7 +76,9 @@ class SubmitHubBot(Bot):
                 self.like_music()
             except NoSuchElementException as e:
                 # print(e)
-                pass
+                self.status = "NoSuchElementException"
+            finally:
+                self.status = "Success"
 
     def run(self, params):
         self.max_likes = params[0]

@@ -19,7 +19,7 @@ class TwitterBot(Bot):
     def __init__ (self, username, password):
         super().__init__(username, password)        
 
-        self.site = "Twitter"
+        self.platform = "Twitter"
         self.base_url = "https://www.twitter.com/"
 
 
@@ -80,6 +80,8 @@ class TwitterBot(Bot):
                 if(self.likes_given>=self.max_likes):
                     break
             time.sleep(random.randrange(4, 8))
+        
+        self.status = "Success"
 
 
     def run(self, params):

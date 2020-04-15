@@ -6,6 +6,7 @@ from Bot import Bot
 
 import os
 import time
+import datetime
 import random
 
 class InstagramBot(Bot):
@@ -13,7 +14,7 @@ class InstagramBot(Bot):
     def __init__ (self, username, password):
         super().__init__(username, password)        
 
-        self.site = "Instagram"
+        self.platform = "Instagram"
         self.base_url = "https://www.instagram.com/"
 
     def login(self):
@@ -44,12 +45,20 @@ class InstagramBot(Bot):
             
             time.sleep(2)
             isLiked = self.driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]')!=[]
+
+            #Code to like the post
             if(self.should_like_post() and not isLiked):
                 self.likes_given+=1
                 waitTimeToLike = random.uniform(1, 3)
                 time.sleep(waitTimeToLike)
+
+                time = datetime.datetime.now()
+                op = 
+                hashtags = 
+
                 self.driver.find_element_by_class_name("wpO6b").click()
                 # print(self.username[0:1], end="", flush=True)
+            
             waitTimeToMoveOn = random.uniform(1, 3)
             time.sleep(waitTimeToMoveOn)
             self.driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
@@ -61,7 +70,7 @@ class InstagramBot(Bot):
     def like_hashtags(self, hashtags):
         mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
-
+        random.shuffle(hashtags)
         
         while(self.likes_given<self.max_likes):
             for hashtag in hashtags:
@@ -89,6 +98,12 @@ class InstagramBot(Bot):
         try:
             self.like_hashtags(params[0])
         except ElementClickInterceptedException as e:
-            # print(e)
-            pass
+            print(e)
+            if self.find_elements_by_xpath("//*[text()='Action Blocked']") != []:
+                print("ACTION BLOCKED FOR " + self.username + " IN " + self.site)
+                self.status = "Action Blocked"
+            else:
+                self.status = "ElementClickedInterceptedException"
+        finally:
+            self.status = "Success"
         self.quit()

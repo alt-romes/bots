@@ -5,6 +5,7 @@ from selenium.common.exceptions import ElementClickInterceptedException
 
 import logging
 import os
+import datetime
 import time
 import random
 import sys
@@ -33,8 +34,10 @@ class Bot:
         self.posts_seen = 0
 
         self.posts_liked = []
-        self.time_started = 0
+        self.time_started = datetime.datetime.now()
         self.time_ended = 0
+
+        self.status = "Unknown Failure"
 
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
@@ -42,7 +45,7 @@ class Bot:
 
 
     def print_bot_starting(self):
-        string = "Starting: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
+        string = "Starting: " + self.get_username() + " in " + self.get_platform() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
         if("--no-colors" in sys.argv):
             logging.info(string)
         else:
@@ -51,17 +54,32 @@ class Bot:
             else:
                 logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
 
+    def get_posts_liked(self):
+        return self.posts_liked
+
+    def get_status(self):
+        return self.status
+
     def get_username(self):
         return self.username
 
     def get_likes_given(self):
         return self.likes_given
 
-    def get_site(self):
-        return self.site
+    def get_platform(self):
+        return self.platform
 
     def get_max_likes(self):
         return self.max_likes
+
+    def get_posts_seen(self):
+        return self.posts_seen
+
+    def get_time_started(self):
+        return self.time_started
+
+    def get_time_ended(self):
+        return self.time_ended
 
     def should_like_post(self):
         chanceToLikePost = random.uniform(0.6, 0.85)
@@ -69,7 +87,7 @@ class Bot:
         return r <= chanceToLikePost
 
     def quit(self):
-        string = ("Finished: " + self.get_username() + " in " + self.get_site() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]")
+        string = ("Finished: " + self.get_username() + " in " + self.get_platform() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]")
         if("--no-colors" in sys.argv):
             logging.info(string)
         else:
@@ -80,4 +98,5 @@ class Bot:
             else:
                 logging.info(bcolors.OKGREEN + string + bcolors.ENDC)
 
+        self.time_ended = datetime.datetime.now()
         self.driver.quit()
