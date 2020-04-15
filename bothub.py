@@ -134,7 +134,7 @@ def create_database(db_file):
                                             platform text NOT NULL,
                                             op text NOT NULL,
                                             time timestamp,
-                                            PRIMARY KEY (username, platform, post_id),
+                                            PRIMARY KEY (post_id),
                                             FOREIGN KEY (username, platform) REFERENCES accounts (username, platform)
                                         ); """
 
