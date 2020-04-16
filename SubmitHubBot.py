@@ -25,11 +25,13 @@ class SubmitHubBot(Bot):
         time.sleep(5)
 
         if (self.driver.current_url != login_url):
+            self.is_logged_in = True
             return
 
         self.driver.find_element_by_id("usernameOrEmail").send_keys(self.username)
         self.driver.find_element_by_id("password").send_keys(self.password)
         self.driver.find_element_by_xpath('//*[@id="my-account-login"]/form/div[3]/button[1]').click()
+        self.is_logged_in = True
 
         time.sleep(5)
 
@@ -72,12 +74,7 @@ class SubmitHubBot(Bot):
         self.driver.get(self.base_url + "hot-or-not")
 
         while(self.likes_given<self.max_likes):
-            try:
-                self.like_music()
-            except NoSuchElementException as e:
-                self.status = "NoSuchElementException"
-            finally:
-                self.status = "Success"
+            self.like_music()
 
     def run(self, params):
         self.max_likes = params[0]
@@ -90,5 +87,11 @@ class SubmitHubBot(Bot):
         self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
         
         self.login()
-        self.hot_or_not()
+        try:
+            self.hot_or_not()
+        except NoSuchElementException:
+            self.status = "NoSuchElementException"
+            print("Something wrong happened in Submit Hub.")
+        finally:
+            self.status = "Success"
         self.quit()

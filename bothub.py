@@ -3,6 +3,7 @@ import random
 import threading
 import logging
 import time
+import datetime
 import curses
 import sys
 
@@ -50,7 +51,7 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
         #curses.beep()
         #curses.flash()
 
-        start_y = int((height // 3))
+        start_y = int((height // 5))
 
         # Print
         for i, bot in enumerate(running_bots):
@@ -64,7 +65,8 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
             string = ("Finished: " + bot.get_username() + " in " + bot.get_platform() + " [ " + str(bot.get_likes_given()) + " / " + str(bot.get_max_likes()) + " ]")[:width-1]
             start_x = int((width // 2) - (len(string) // 2) - len(string) % 2)
             if(bot.get_max_likes()<=0):
-                stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(4)) 
+                # stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(4)) 
+                pass
             elif(bot.get_likes_given()>=bot.get_max_likes()):
                 stdscr.addstr(start_y + (i*3), start_x, string, curses.color_pair(2))
             else:
@@ -89,7 +91,7 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
         try:
             bots[i][j].run(pvals[i][j%(len(pvals[i]))])
         except:
-            logging.info("Something seriously fucked up happened.")
+            logging.info("Something that should not have happened inside bot.run() happened.")
         finished_bots.append(bots[i][j])
         running_bots[i] = None
         #set bigger waiting time in between bots ? like an hour
@@ -125,6 +127,11 @@ def run_bots(bots, db):
                 post_id = db.create_liked_post(liked_post_entry)
                 for hashtag in liked_post[3]: #post hashtags
                     db.add_post_hashtag((post_id, hashtag))
+            if isinstance(bot, InstagramBot):
+                for follower in bot.get_followers_list():
+                    db.add_instagram_follower((bot.get_platform(), bot.get_username(), follower, datetime.datetime.now()))
+
+
 
 
 def create_bots_tables(db, bots):
@@ -132,11 +139,14 @@ def create_bots_tables(db, bots):
         for bot in botlist:
             db.create_account((bot.get_username(), bot.get_platform()))
 
-    pvals = list(params.values()) 
-    for i in range(1, len(pvals)):
-        for j in range(len(pvals[i])):
-            for hashtag in pvals[i][j][0]:
-                db.add_account_hashtag((bots[i][j].get_username(), bots[i][j].get_platform(), hashtag, 0))
+    pvals = list(params.values())
+    try:
+        for i in range(1, len(pvals)):
+            for j in range(len(pvals[i])):
+                for hashtag in pvals[i][j][0]:
+                    db.add_account_hashtag((bots[i][j].get_username(), bots[i][j].get_platform(), hashtag, 0))
+    except:
+        logging.info("Error. Error. You probably have more parameters than there are bots.")
 
 def get_bots():
 
@@ -170,6 +180,9 @@ def main():
 
     bots = get_bots()
     create_bots_tables(db, bots)
+
+    #TODO: NOT EXTENSIBLE CALL. ALSO, THIS TOKEN EXPIRES IN TWO MONTHS. Steps (IN THIS ORDER) : 1- Add the permissions, 2- Select Generate Key
+    igAPI = InstagramAPI('Romes', 'EAAEjpIcjnsEBAPwg4SW3ZAvElCZBnoWgN85t8VifWPhU1VTiGWlk6kVV5lOKPxPeWxYrIBEpbqDA66FYqgYKOCW6XgrxEWo1MuD1Ld8KkYkvcWZAtsvakx0VCXpcUH4MFMvIqkvpd6MZBFKmq6yZAUHDcDZA9go78ZD')
 
     logging.info("Main: Starting bot threads.")
     run_bots(bots, db)

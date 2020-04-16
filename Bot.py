@@ -43,6 +43,8 @@ class Bot:
 
         self.status = "Unknown Failure"
 
+        self.is_logged_in = False
+
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
@@ -56,7 +58,31 @@ class Bot:
                 logging.info(bcolors.WARNING + string + bcolors.ENDC)
             else:
                 logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
-                
+
+    def scroll_down(self, element):
+        """A method for scrolling the page."""
+
+        # Get scroll height.
+        last_height = self.driver.execute_script("return arguments[0].scrollHeight", element)
+
+        while True:
+
+            # Scroll down to the bottom.
+            self.driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight);", element)
+
+            # Wait to load the page.
+            time.sleep(2)
+
+            # Calculate new scroll height and compare with last scroll height.
+            new_height = self.driver.execute_script("return arguments[0].scrollHeight", element)
+
+            if new_height == last_height:
+
+                break
+
+            last_height = new_height        
+
+
     def get_posts_liked(self):
         return self.posts_liked
 
@@ -103,3 +129,4 @@ class Bot:
 
         self.time_ended = datetime.datetime.now()
         self.driver.quit()
+        self.driver = None

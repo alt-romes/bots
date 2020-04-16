@@ -30,11 +30,14 @@ class TwitterBot(Bot):
         time.sleep(5)
 
         if (self.driver.current_url != login_url):
+            self.is_logged_in = True
             return        
 
         self.driver.find_element_by_name("session[username_or_email]").send_keys(self.username)
         self.driver.find_element_by_name("session[password]").send_keys(self.password)
         self.driver.find_element_by_css_selector('div[role="button"][data-testid="LoginForm_Login_Button"]').click()
+
+        self.is_logged_in = True
 
         time.sleep(2)
 

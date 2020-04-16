@@ -1,12 +1,21 @@
 import sqlite3
 
 
-
 class Database:
 
     def __init__(self, path):
         self.conn = sqlite3.connect(path)
         self.create_database()
+
+    def add_instagram_follower(self, accfollower):
+
+        insert = ''' INSERT OR IGNORE INTO accFollowers(platform, username, follower, time_detected)
+                VALUES(?, ?, ?, ?)
+                    '''
+
+        cur = self.conn.cursor()
+        cur.execute(insert, accfollower)
+        self.conn.commit()    
 
     def add_account_hashtag(self, acchashtag):
 
@@ -125,11 +134,21 @@ class Database:
                                                 PRIMARY KEY (post_id, hashtag)
                                             ); """
 
+            accfollowers_table = """ CREATE TABLE IF NOT EXISTS accFollowers (
+                                                platform text NOT NULL,
+                                                username text NOT NULL,
+                                                follower text NOT NULL,
+                                                time_detected timestamp,
+                                                FOREIGN KEY (username, platform) REFERENCES accounts (username, platform),
+                                                PRIMARY KEY (username, platform, follower)
+                                            ); """
+
             self.create_table(accounts_table)
             self.create_table(likejobs_table)
             self.create_table(acchashtags_table)
             self.create_table(likedposts_table)
             self.create_table(likedpostshashtags_table)
+            self.create_table(accfollowers_table)
         
         else:
             print("Error connecting to database!")

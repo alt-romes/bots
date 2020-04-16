@@ -2,7 +2,11 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 
+#Parent class
 from Bot import Bot
+
+#Instagram API module
+from InstagramAPI import InstagramAPI
 
 import os
 import time
@@ -24,15 +28,40 @@ class InstagramBot(Bot):
         time.sleep(5)
 
         if (self.driver.current_url != login_url):
+            self.is_logged_in = True
             return
 
         self.driver.find_element_by_name("username").send_keys(self.username)
         self.driver.find_element_by_name("password").send_keys(self.password)
         self.driver.find_element_by_css_selector('div>button[type="submit"]').click()
 
+        self.is_logged_in = True
+
         # print("Logged in as " + self.username + " in " + self.base_url)
 
         time.sleep(5)
+
+    def get_followers_list(self):
+        if self.driver == None:
+            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+            time.sleep(2)
+        self.driver.get('https://www.instagram.com/{}/'.format(self.username))
+        time.sleep(5)
+        self.driver.find_element_by_css_selector('a[href="/romesrf/followers/"]').click()
+        time.sleep(2)
+        dialog = self.driver.find_element_by_css_selector('div.isgrP')
+        time.sleep(1)
+        self.scroll_down(dialog)
+        time.sleep(2)
+        followers = self.driver.find_elements_by_css_selector('a.notranslate')
+        follower_list = [follower.text for follower in followers]
+        self.driver.quit()
+        self.driver = None
+        return follower_list
+
+    def get_unfollowers_list(self):
+        #Match current followers with database?
+        pass
 
 
     def like_posts(self, hashtag, maxLikesPerHashtag):
@@ -115,4 +144,5 @@ class InstagramBot(Bot):
                 self.status = "ElementClickedInterceptedException"
         finally:
             self.status = "Success"
+
         self.quit()
