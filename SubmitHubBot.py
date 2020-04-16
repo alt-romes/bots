@@ -11,10 +11,10 @@ import random
 
 class SubmitHubBot(Bot):
 
-    def __init__ (self, username, password):
+    def __init__ (self, username, password, database=None):
         self.platform = "SubmitHub"
         self.base_url = "https://www.submithub.com/"
-        super().__init__(username, password)
+        super().__init__(username, password, database)
 
         self.chrome_options.add_argument("--mute-audio")
 
@@ -70,28 +70,30 @@ class SubmitHubBot(Bot):
 
     def hot_or_not(self):
 
+        try:
+            self.driver.get(self.base_url + "hot-or-not")
 
-        self.driver.get(self.base_url + "hot-or-not")
+            while(self.likes_given<self.max_likes):
+                self.like_music()
+    
+            self.status = "Success"
+        except KeyboardInterrupt:
+            self.status = "Aborted"
+        except NoSuchElementException:
+            self.status = "NoSuchElementException"
 
-        while(self.likes_given<self.max_likes):
-            self.like_music()
-
+        self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
+        
     def run(self, params):
         self.max_likes = params[0]
 
         super().print_bot_starting()
 
-        if(self.max_likes<=0):
-            return
+        if(self.max_likes>0):
 
-        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
-        
-        self.login()
-        try:
+            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+            
+            self.login()
             self.hot_or_not()
-        except NoSuchElementException:
-            self.status = "NoSuchElementException"
-            print("Something wrong happened in Submit Hub.")
-        finally:
-            self.status = "Success"
+
         self.quit()

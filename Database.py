@@ -4,27 +4,27 @@ import sqlite3
 class Database:
 
     def __init__(self, path):
-        self.conn = sqlite3.connect(path)
+        self.conn = sqlite3.connect(path, check_same_thread=False)
         self.create_database()
 
-    def add_instagram_follower(self, accfollower):
+    def add_instagram_followers(self, accfollowers):
 
         insert = ''' INSERT OR IGNORE INTO accFollowers(platform, username, follower, time_detected)
                 VALUES(?, ?, ?, ?)
                     '''
 
         cur = self.conn.cursor()
-        cur.execute(insert, accfollower)
-        self.conn.commit()    
+        cur.executemany(insert, accfollowers)
+        self.conn.commit()   
 
-    def add_account_hashtag(self, acchashtag):
+    def add_account_hashtags(self, acchashtags):
 
-        insert = ''' INSERT OR IGNORE INTO accHashtags(username, platform, hashtag, followers_revenue)
-                VALUES(?, ?, ?, ?)
+        insert = ''' INSERT OR IGNORE INTO accHashtags(username, platform, hashtag)
+                VALUES(?, ?, ?)
                     '''
 
         cur = self.conn.cursor()
-        cur.execute(insert, acchashtag)
+        cur.executemany(insert, acchashtags)
         self.conn.commit()    
 
 
@@ -111,7 +111,6 @@ class Database:
                                                 username text NOT NULL,
                                                 platform text NOT NULL,
                                                 hashtag text NOT NULL,
-                                                followers_revenue integer,
                                                 PRIMARY KEY (username, platform, hashtag),
                                                 FOREIGN KEY (username, platform) REFERENCES accounts (username, platform)
                                             ); """

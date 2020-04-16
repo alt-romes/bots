@@ -16,11 +16,11 @@ from Bot import Bot
 
 class TwitterBot(Bot):
 
-    def __init__ (self, username, password):
+    def __init__ (self, username, password, database=None):
         self.platform = "Twitter"
         self.base_url = "https://www.twitter.com/"
 
-        super().__init__(username, password)        
+        super().__init__(username, password, database)        
 
 
     def login(self):
@@ -60,13 +60,12 @@ class TwitterBot(Bot):
                 if len(hearts)>0:
                     try:
                         hearts[0].click()
-                    except ElementClickInterceptedException:
-                        pass
-                    finally:
                         self.posts_seen += 1
                         current_posts_seen += 1
                         self.likes_given+=1
                         liked=True
+                    except ElementClickInterceptedException:
+                        pass
                 else:
                     hearts = self.driver.find_elements_by_css_selector("div[data-testid='like']")
                 body.send_keys(Keys.DOWN)
@@ -77,34 +76,41 @@ class TwitterBot(Bot):
 
 
     def like_hashtags(self, hashtags):
+        try:
+            if self.db is not None:
+                self.db.add_account_hashtags( list( map( (lambda hashtag: (self.get_username(), self.get_platform(), hashtag)), hashtags) ) )
 
-        mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
-        max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
+            mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
+            max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
 
-        random.shuffle(hashtags)
+            random.shuffle(hashtags)
 
-        while(self.likes_given<self.max_likes):
-            for hashtag in hashtags:
-                self.like_posts(hashtag, max_likes_per_hashtag)
-                if(self.likes_given>=self.max_likes):
-                    break
-            time.sleep(random.randrange(4, 8))
+            while(self.likes_given<self.max_likes):
+                for hashtag in hashtags:
+                    self.like_posts(hashtag, max_likes_per_hashtag)
+                    if(self.likes_given>=self.max_likes):
+                        break
+                time.sleep(random.randrange(4, 8))
+
+            self.status = "Success"
+        except KeyboardInterrupt:
+            self.status = "Aborted"
+        except:
+            pass
         
-        self.status = "Success"
-
+        self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
 
     def run(self, params):
-
 
         self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
 
         super().print_bot_starting()
 
-        if(self.max_likes<=0):
-            return
+        if(self.max_likes>0):
 
-        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
 
-        self.login()
-        self.like_hashtags(params[0])
+            self.login()
+            self.like_hashtags(params[0])
+
         self.quit()

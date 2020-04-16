@@ -16,9 +16,14 @@ from Database import Database
 
 class Bot:
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, database_path=None):
         self.username = username
         self.password = password
+        self.db = None
+
+        if database_path is not None:
+            self.db = Database(database_path)
+            self.db.create_account((self.get_username(), self.get_platform()))
 
         self.chrome_options = webdriver.ChromeOptions()
 
@@ -128,5 +133,6 @@ class Bot:
                 logging.info(bcolors.OKGREEN + string + bcolors.ENDC)
 
         self.time_ended = datetime.datetime.now()
-        self.driver.quit()
-        self.driver = None
+        if self.driver is not None:
+            self.driver.quit()
+            self.driver = None

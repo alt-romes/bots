@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 
@@ -15,25 +16,24 @@ import random
 
 class InstagramBot(Bot):
 
-    def __init__ (self, username, password):
+    def __init__ (self, username, password, database=None):
         self.platform = "Instagram"
         self.base_url = "https://www.instagram.com/"
 
-        super().__init__(username, password) 
+        super().__init__(username, password, database)
 
     def login(self):
-        login_url = self.base_url + "accounts/login"
-        self.driver.get(login_url)
+        self.driver.get(self.base_url)
 
-        time.sleep(5)
+        time.sleep(1)
 
-        if (self.driver.current_url != login_url):
-            self.is_logged_in = True
-            return
-
-        self.driver.find_element_by_name("username").send_keys(self.username)
-        self.driver.find_element_by_name("password").send_keys(self.password)
-        self.driver.find_element_by_css_selector('div>button[type="submit"]').click()
+        try:
+            self.driver.find_element_by_name("username").send_keys(self.username)
+            self.driver.find_element_by_name("password").send_keys(self.password, Keys.ENTER)
+        except NoSuchElementException:
+            #Is already logged in
+            pass
+        # self.driver.find_element_by_css_selector('div>button[type="submit"]').click()
 
         self.is_logged_in = True
 
@@ -47,13 +47,13 @@ class InstagramBot(Bot):
             time.sleep(2)
         self.driver.get('https://www.instagram.com/{}/'.format(self.username))
         time.sleep(5)
-        self.driver.find_element_by_css_selector('a[href="/romesrf/followers/"]').click()
+        self.driver.find_element_by_css_selector('a[href="/{}/followers/"]'.format(self.username)).click()
         time.sleep(2)
         dialog = self.driver.find_element_by_css_selector('div.isgrP')
         time.sleep(1)
         self.scroll_down(dialog)
         time.sleep(2)
-        followers = self.driver.find_elements_by_css_selector('a.notranslate')
+        followers = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
         follower_list = [follower.text for follower in followers]
         self.driver.quit()
         self.driver = None
@@ -102,23 +102,37 @@ class InstagramBot(Bot):
         sleepTime = random.randrange(4,16)
         time.sleep(sleepTime)
 
-
+    # Must be already in instagram logged in
     def like_hashtags(self, hashtags):
-        mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
-        max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
-        random.shuffle(hashtags)
         
-        while(self.likes_given<self.max_likes):
-            for hashtag in hashtags:
-                try:
-                    self.like_posts(hashtag, max_likes_per_hashtag)
-                except NoSuchElementException: 
-                    # print("x", end="", flush=True)
-                    pass
-                if(self.likes_given>=self.max_likes):
-                    break
-            time.sleep(random.randrange(4, 8))
+        try:
+            if self.db is not None:
+                self.db.add_account_hashtags( list( map( (lambda hashtag: (self.get_username(), self.get_platform(), hashtag)), hashtags) ) )
 
+            mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
+            max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
+            random.shuffle(hashtags)
+            
+            while(self.likes_given<self.max_likes):
+                for hashtag in hashtags:
+                    try:
+                        self.like_posts(hashtag, max_likes_per_hashtag)
+                    except NoSuchElementException: 
+                        pass
+                    if(self.likes_given>=self.max_likes):
+                        break
+                time.sleep(random.randrange(4, 8))
+            self.status = "Success"
+        except KeyboardInterrupt:
+            self.status = "Aborted"
+        except ElementClickInterceptedException as e:
+            print(e)
+            if self.find_elements_by_xpath("//*[text()='Action Blocked']") != []:
+                self.status = "Action Blocked"
+            else:
+                self.status = "ElementClickedInterceptedException"
+
+        self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
 
     def run(self, params):
 
@@ -126,23 +140,14 @@ class InstagramBot(Bot):
 
         super().print_bot_starting()
 
-        if(self.max_likes<=0):
-            return
+        if(self.max_likes>0):
+            
+            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
 
-        self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+            self.login()
 
-        self.login()
-        # print()
-        try:
             self.like_hashtags(params[0])
-        except ElementClickInterceptedException as e:
-            print(e)
-            if self.find_elements_by_xpath("//*[text()='Action Blocked']") != []:
-                print("ACTION BLOCKED FOR " + self.username + " IN " + self.site)
-                self.status = "Action Blocked"
-            else:
-                self.status = "ElementClickedInterceptedException"
-        finally:
-            self.status = "Success"
 
+            self.db.add_instagram_followers( list( map( (lambda follower: (self.get_username(), self.get_platform(), follower, datetime.datetime.now())), self.get_followers_list() ) ) )
+        
         self.quit()

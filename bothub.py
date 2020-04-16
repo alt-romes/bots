@@ -98,7 +98,7 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
     logging.info("Thread %s: finishing", i)
 
 
-def run_bots(bots, db):
+def run_bots(bots): #, db
     pvals = list(params.values())
     threads=list()
     running_bots = list()
@@ -118,50 +118,52 @@ def run_bots(bots, db):
         thread.join()
 
     #add finished_bots to database
-    for bot in finished_bots:
-        if bot.get_max_likes() > 0:
-            likejob = (bot.get_username(), bot.get_platform(), bot.get_likes_given(), bot.get_max_likes(), bot.get_status(), bot.get_time_started(), bot.get_time_ended(), bot.get_posts_seen())
-            db.create_likejob(likejob)
-            for liked_post in bot.get_posts_liked():
-                liked_post_entry = (bot.get_username(), bot.get_platform(), liked_post[0], liked_post[1], liked_post[2]) #op, time, hashtag liked in
-                post_id = db.create_liked_post(liked_post_entry)
-                for hashtag in liked_post[3]: #post hashtags
-                    db.add_post_hashtag((post_id, hashtag))
-            if isinstance(bot, InstagramBot):
-                for follower in bot.get_followers_list():
-                    db.add_instagram_follower((bot.get_platform(), bot.get_username(), follower, datetime.datetime.now()))
+    # for bot in finished_bots:
+    #     if bot.get_max_likes() > 0:
+    #         likejob = (bot.get_username(), bot.get_platform(), bot.get_likes_given(), bot.get_max_likes(), bot.get_status(), bot.get_time_started(), bot.get_time_ended(), bot.get_posts_seen())
+    #         db.create_likejob(likejob)
+    #         for liked_post in bot.get_posts_liked():
+    #             liked_post_entry = (bot.get_username(), bot.get_platform(), liked_post[0], liked_post[1], liked_post[2]) #op, time, hashtag liked in
+    #             post_id = db.create_liked_post(liked_post_entry)
+    #             for hashtag in liked_post[3]: #post hashtags
+    #                 db.add_post_hashtag((post_id, hashtag))
+    #         if isinstance(bot, InstagramBot):
+    #             for follower in bot.get_followers_list():
+    #                 # db.add_instagram_followers((bot.get_platform(), bot.get_username(), follower, datetime.datetime.now()))
+    #                 pass
 
 
 
 
-def create_bots_tables(db, bots):
-    for botlist in bots:
-        for bot in botlist:
-            db.create_account((bot.get_username(), bot.get_platform()))
+# def create_bots_tables(db, bots):
+#     for botlist in bots:
+#         for bot in botlist:
+#             db.create_account((bot.get_username(), bot.get_platform()))
 
-    pvals = list(params.values())
-    try:
-        for i in range(1, len(pvals)):
-            for j in range(len(pvals[i])):
-                for hashtag in pvals[i][j][0]:
-                    db.add_account_hashtag((bots[i][j].get_username(), bots[i][j].get_platform(), hashtag, 0))
-    except:
-        logging.info("Error. Error. You probably have more parameters than there are bots.")
+#     pvals = list(params.values())
+#     try:
+#         for i in range(1, len(pvals)):
+#             for j in range(len(pvals[i])):
+#                 for hashtag in pvals[i][j][0]:
+#                     db.add_account_hashtags([(bots[i][j].get_username(), bots[i][j].get_platform(), hashtag)])
+#     except:
+#         logging.info("Error. Error. You probably have more parameters than there are bots.")
 
-def get_bots():
+
+def create_bots(db):
 
     igbots = []
     for i in range(len(credentials['instagram'])): #instagram
-        igbots.append(InstagramBot(credentials['instagram'][i]['username'], credentials['instagram'][i]['password']))
+        igbots.append(InstagramBot(credentials['instagram'][i]['username'], credentials['instagram'][i]['password'], db))
     igbots2 = []
     for i in range(len(credentials['instagram2'])): #mom's instagram
-        igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password']))
+        igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password'], db))
     ttbots = []
     for i in range(len(credentials['twitter'])):
-        ttbots.append(TwitterBot(credentials['twitter'][i]['username'], credentials['twitter'][i]['password']))
+        ttbots.append(TwitterBot(credentials['twitter'][i]['username'], credentials['twitter'][i]['password'], db))
 
     bots = [
-        [SubmitHubBot(credentials['submithub']['username'], credentials['submithub']['password'])],
+        [SubmitHubBot(credentials['submithub']['username'], credentials['submithub']['password'], db)],
         ttbots,
         igbots,
         igbots2
@@ -175,20 +177,20 @@ def main():
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-    db_path = "/Users/romes/everything-else/botdev/organized/likebots/dbbots.db"
-    db = Database("/Users/romes/everything-else/botdev/organized/likebots/dbbots.db")
+    db = "/Users/romes/everything-else/botdev/organized/likebots/dbbots2.db"
 
-    bots = get_bots()
-    create_bots_tables(db, bots)
+    bots = create_bots(db)
+    # create_bots_tables(db, bots)
 
     #TODO: NOT EXTENSIBLE CALL. ALSO, THIS TOKEN EXPIRES IN TWO MONTHS. Steps (IN THIS ORDER) : 1- Add the permissions, 2- Select Generate Key
-    igAPI = InstagramAPI('Romes', 'EAAEjpIcjnsEBAPwg4SW3ZAvElCZBnoWgN85t8VifWPhU1VTiGWlk6kVV5lOKPxPeWxYrIBEpbqDA66FYqgYKOCW6XgrxEWo1MuD1Ld8KkYkvcWZAtsvakx0VCXpcUH4MFMvIqkvpd6MZBFKmq6yZAUHDcDZA9go78ZD')
+    # InstagramAPI shall be called from InstagramBot. this file only interacts with InstagramBot.
+    # igAPI = InstagramAPI('Romes', 'EAAEjpIcjnsEBAPwg4SW3ZAvElCZBnoWgN85t8VifWPhU1VTiGWlk6kVV5lOKPxPeWxYrIBEpbqDA66FYqgYKOCW6XgrxEWo1MuD1Ld8KkYkvcWZAtsvakx0VCXpcUH4MFMvIqkvpd6MZBFKmq6yZAUHDcDZA9go78ZD')
 
     logging.info("Main: Starting bot threads.")
-    run_bots(bots, db)
+    run_bots(bots) #, db
     logging.info("Main: Finished all bot threads.")
 
-    db.close()
+    # db.close()
 
     logging.info("Closed database. End program.")
 
