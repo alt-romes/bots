@@ -112,7 +112,7 @@ def run_bots(bots):
         threads.append(x)
         x.start()
 
-    if not ("--no-interface" in sys.argv):
+    if not ( ("--no-interface" in sys.argv) or ("--debug" in sys.argv) ) :
         curses.wrapper(interface, running_bots, finished_bots, threads)
 
     for i, thread in enumerate(threads):

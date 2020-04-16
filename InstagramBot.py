@@ -19,6 +19,7 @@ class InstagramBot(Bot):
     def __init__ (self, username, password, database=None):
         self.platform = "Instagram"
         self.base_url = "https://www.instagram.com/"
+        self.page_name = None
 
         super().__init__(username, password, database)
 
@@ -30,12 +31,17 @@ class InstagramBot(Bot):
         try:
             self.driver.find_element_by_name("username").send_keys(self.username)
             self.driver.find_element_by_name("password").send_keys(self.password, Keys.ENTER)
+            time.sleep(2)
 
-            self.driver.find_element_by_css_selector('button.bIiDR').click()
-            time.sleep(1)
         except NoSuchElementException:
             #Is already logged in
             pass
+        finally:
+            self.driver.find_element_by_css_selector('button.bIiDR').click()
+            time.sleep(2)
+
+        self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
+
         self.is_logged_in = True
 
         time.sleep(3)
@@ -129,8 +135,9 @@ class InstagramBot(Bot):
         except KeyboardInterrupt:
             self.status = "Aborted"
         except ElementClickInterceptedException as e:
+            time.sleep(5)
             print(e)
-            if self.find_elements_by_xpath("//*[text()='Action Blocked']") != []:
+            if self.driver.find_elements_by_xpath("//*[text()='Action Blocked']") != []:
                 self.status = "Action Blocked"
             else:
                 self.status = "ElementClickedInterceptedException"
@@ -143,7 +150,6 @@ class InstagramBot(Bot):
         self.driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
         time.sleep(3)
         activity_feed = self.driver.find_element_by_css_selector('div.uo5MA._2ciX.tWgj8.XWrBI')
-        pass
 
     def run(self, params):
 
