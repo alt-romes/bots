@@ -90,15 +90,16 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
         #the % bit is to re-use the same parameter for multiple accounts
         try:
             bots[i][j].run(pvals[i][j%(len(pvals[i]))])
-        except:
+        except Exception as e:
             logging.info("Something that should not have happened inside bot.run() happened.")
+            print(e)
         finished_bots.append(bots[i][j])
         running_bots[i] = None
         #set bigger waiting time in between bots ? like an hour
     logging.info("Thread %s: finishing", i)
 
 
-def run_bots(bots): #, db
+def run_bots(bots): 
     pvals = list(params.values())
     threads=list()
     running_bots = list()
@@ -116,38 +117,6 @@ def run_bots(bots): #, db
 
     for i, thread in enumerate(threads):
         thread.join()
-
-    #add finished_bots to database
-    # for bot in finished_bots:
-    #     if bot.get_max_likes() > 0:
-    #         likejob = (bot.get_username(), bot.get_platform(), bot.get_likes_given(), bot.get_max_likes(), bot.get_status(), bot.get_time_started(), bot.get_time_ended(), bot.get_posts_seen())
-    #         db.create_likejob(likejob)
-    #         for liked_post in bot.get_posts_liked():
-    #             liked_post_entry = (bot.get_username(), bot.get_platform(), liked_post[0], liked_post[1], liked_post[2]) #op, time, hashtag liked in
-    #             post_id = db.create_liked_post(liked_post_entry)
-    #             for hashtag in liked_post[3]: #post hashtags
-    #                 db.add_post_hashtag((post_id, hashtag))
-    #         if isinstance(bot, InstagramBot):
-    #             for follower in bot.get_followers_list():
-    #                 # db.add_instagram_followers((bot.get_platform(), bot.get_username(), follower, datetime.datetime.now()))
-    #                 pass
-
-
-
-
-# def create_bots_tables(db, bots):
-#     for botlist in bots:
-#         for bot in botlist:
-#             db.create_account((bot.get_username(), bot.get_platform()))
-
-#     pvals = list(params.values())
-#     try:
-#         for i in range(1, len(pvals)):
-#             for j in range(len(pvals[i])):
-#                 for hashtag in pvals[i][j][0]:
-#                     db.add_account_hashtags([(bots[i][j].get_username(), bots[i][j].get_platform(), hashtag)])
-#     except:
-#         logging.info("Error. Error. You probably have more parameters than there are bots.")
 
 
 def create_bots(db):
@@ -177,10 +146,9 @@ def main():
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-    db = "/Users/romes/everything-else/botdev/organized/likebots/dbbots2.db"
+    db = "/Users/romes/everything-else/botdev/organized/likebots/dbbots.db"
 
     bots = create_bots(db)
-    # create_bots_tables(db, bots)
 
     #TODO: NOT EXTENSIBLE CALL. ALSO, THIS TOKEN EXPIRES IN TWO MONTHS. Steps (IN THIS ORDER) : 1- Add the permissions, 2- Select Generate Key
     # InstagramAPI shall be called from InstagramBot. this file only interacts with InstagramBot.
@@ -189,8 +157,6 @@ def main():
     logging.info("Main: Starting bot threads.")
     run_bots(bots) #, db
     logging.info("Main: Finished all bot threads.")
-
-    # db.close()
 
     logging.info("Closed database. End program.")
 

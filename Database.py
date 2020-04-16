@@ -28,14 +28,14 @@ class Database:
         self.conn.commit()    
 
 
-    def add_post_hashtag(self, posthashtag):
+    def add_post_hashtags(self, posthashtags):
 
         insert = ''' INSERT OR IGNORE INTO likedPostsHashtags(post_id, hashtag)
                 VALUES(?, ?)
                     '''
 
         cur = self.conn.cursor()
-        cur.execute(insert, posthashtag)
+        cur.executemany(insert, posthashtags)
         self.conn.commit()
 
 

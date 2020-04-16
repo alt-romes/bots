@@ -30,16 +30,15 @@ class InstagramBot(Bot):
         try:
             self.driver.find_element_by_name("username").send_keys(self.username)
             self.driver.find_element_by_name("password").send_keys(self.password, Keys.ENTER)
+
+            self.driver.find_element_by_css_selector('button.bIiDR').click()
+            time.sleep(1)
         except NoSuchElementException:
             #Is already logged in
             pass
-        # self.driver.find_element_by_css_selector('div>button[type="submit"]').click()
-
         self.is_logged_in = True
 
-        # print("Logged in as " + self.username + " in " + self.base_url)
-
-        time.sleep(5)
+        time.sleep(3)
 
     def get_followers_list(self):
         if self.driver == None:
@@ -48,7 +47,7 @@ class InstagramBot(Bot):
         self.driver.get('https://www.instagram.com/{}/'.format(self.username))
         time.sleep(5)
         self.driver.find_element_by_css_selector('a[href="/{}/followers/"]'.format(self.username)).click()
-        time.sleep(2)
+        time.sleep(5)
         dialog = self.driver.find_element_by_css_selector('div.isgrP')
         time.sleep(1)
         self.scroll_down(dialog)
@@ -90,7 +89,11 @@ class InstagramBot(Bot):
                 tags = self.driver.find_element_by_class_name("C4VMK").text
                 hashtags = list({tag.strip("#") for tag in tags.split() if tag.startswith("#")})
 
-                self.posts_liked.append((op, time_liked, hashtag, hashtags))
+                liked_post = (op, time_liked, hashtag, hashtags)
+                liked_post_entry = (self.get_username(), self.get_platform(), liked_post[0], liked_post[1], liked_post[2]) #op, time, hashtag liked in
+                post_id = self.db.create_liked_post(liked_post_entry)
+                self.db.add_post_hashtags(list ( map ( (lambda hashtag: (post_id, hashtag)), liked_post[3]) ) )
+                # self.posts_liked.append((op, time_liked, hashtag, hashtags))
 
                 self.driver.find_element_by_class_name("wpO6b").click()
                 # print(self.username[0:1], end="", flush=True)
@@ -133,6 +136,14 @@ class InstagramBot(Bot):
                 self.status = "ElementClickedInterceptedException"
 
         self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
+    
+    def be_human(self):
+        print("Hi i'm human")
+        time.sleep(1)
+        self.driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
+        time.sleep(3)
+        activity_feed = self.driver.find_element_by_css_selector('div.uo5MA._2ciX.tWgj8.XWrBI')
+        pass
 
     def run(self, params):
 
@@ -146,8 +157,10 @@ class InstagramBot(Bot):
 
             self.login()
 
+            self.be_human()
+
             self.like_hashtags(params[0])
 
-            self.db.add_instagram_followers( list( map( (lambda follower: (self.get_username(), self.get_platform(), follower, datetime.datetime.now())), self.get_followers_list() ) ) )
+            self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), self.get_followers_list() ) ) )
         
         self.quit()

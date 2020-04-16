@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import WebDriverException
 
 import logging
 import os
@@ -52,6 +53,28 @@ class Bot:
 
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+    def wheel_element(element, deltaY = 120, offsetX = 0, offsetY = 0):
+        error = element._parent.execute_script("""
+            var element = arguments[0];
+            var deltaY = arguments[1];
+            var box = element.getBoundingClientRect();
+            var clientX = box.left + (arguments[2] || box.width / 2);
+            var clientY = box.top + (arguments[3] || box.height / 2);
+            var target = element.ownerDocument.elementFromPoint(clientX, clientY);
+
+            for (var e = target; e; e = e.parentElement) {
+            if (e === element) {
+                target.dispatchEvent(new MouseEvent('mouseover', {view: window, bubbles: true, cancelable: true, clientX: clientX, clientY: clientY}));
+                target.dispatchEvent(new MouseEvent('mousemove', {view: window, bubbles: true, cancelable: true, clientX: clientX, clientY: clientY}));
+                target.dispatchEvent(new WheelEvent('wheel',     {view: window, bubbles: true, cancelable: true, clientX: clientX, clientY: clientY, deltaY: deltaY}));
+                return;
+            }
+            }    
+            return "Element is not interactable";
+            """, element, deltaY, offsetX, offsetY)
+        if error:
+            raise WebDriverException(error)
 
 
     def print_bot_starting(self):
@@ -133,6 +156,11 @@ class Bot:
                 logging.info(bcolors.OKGREEN + string + bcolors.ENDC)
 
         self.time_ended = datetime.datetime.now()
+        
+        if self.db is not None:
+            self.db.close()
+
+
         if self.driver is not None:
             self.driver.quit()
             self.driver = None
