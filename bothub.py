@@ -3,7 +3,6 @@ import random
 import threading
 import logging
 import time
-import datetime
 import curses
 import sys
 

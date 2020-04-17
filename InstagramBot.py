@@ -35,10 +35,16 @@ class InstagramBot(Bot):
 
         except NoSuchElementException:
             #Is already logged in
+            print("Is already logged in")
             pass
-        finally:
+
+        try:
             self.driver.find_element_by_css_selector('button.bIiDR').click()
             time.sleep(2)
+        except:
+            #Already enabled notifications
+            print("Has already enabled notifications")
+            pass
 
         self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
 
