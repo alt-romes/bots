@@ -46,11 +46,14 @@ class InstagramBot(Bot):
             print("Has already enabled notifications")
             pass
 
-        self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
+        try:
+            time.sleep(1)
+            self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
+        except Exception as e:
+            print("Couldn't find page name", e)
 
         self.is_logged_in = True
-
-        time.sleep(3)
+        time.sleep(1)
 
     def get_followers_list(self):
         if self.driver == None:
@@ -60,9 +63,7 @@ class InstagramBot(Bot):
         time.sleep(5)
         self.driver.find_element_by_css_selector('a[href="/{}/followers/"]'.format(self.username)).click()
         time.sleep(5)
-        dialog = self.driver.find_element_by_css_selector('div.isgrP')
-        time.sleep(1)
-        self.scroll_down(dialog)
+        self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
         time.sleep(2)
         followers = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
         follower_list = [follower.text for follower in followers]
@@ -75,12 +76,104 @@ class InstagramBot(Bot):
         pass
 
 
+    # Assumes you're in a page with the activity feed button (notifications hear)
+    def scroll_activity_feed(self):
+        time.sleep(1)
+        self.driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
+        time.sleep(3)
+        self.scroll_down(self.driver.find_element_by_css_selector('div._01UL2'), 0.05)
+        time.sleep(1)
+        self.driver.execute_script('arguments[0].click();' ,self.driver.find_element_by_css_selector('div.wgVJm'))
+        time.sleep(1)
+
+    # It'll only watch new stories, mode="--home" if you're watching stories of who you follow, mode="--hashtag" if you're watching stories with a hashtag
+    def watch_new_stories(self, mode="--home"):
+
+        #TODO: COULD ALSO VOTE POLLS ?? DO they work on web??
+
+        try:
+            if mode=="--home":
+                canvas = self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/section/div[3]/div[2]/div[2]/div/div/div/div[1]/button[@class="jZyv1  H-yu6"]/div[1]/canvas') #('button.jZyv1.H-yu6>div>canvas.CfWVH[height="44"]')
+                if int(canvas.get_attribute("height")) % 11 == 0:
+                    self.driver.find_element_by_css_selector('button.jZyv1.H-yu6>div>span>img._6q-tv').click()
+            elif mode=="--hashtag":
+                self.driver.find_element_by_css_selector('div.T7reQ._0FuTv.pkWJh>div>div>img').click()
+            time.sleep(2)
+            while True:
+                try:
+                    self.driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
+                    time.sleep(random.uniform(0.5, 2))
+                except Exception as e:
+                    # print("Tried to skip story too fast.")
+                    pass
+                finally:
+                    try:
+                        self.driver.find_element_by_css_selector('section.carul')
+                    except NoSuchElementException:
+                        # print("Finished watching stories!")
+                        break
+                    except Exception:
+                        print("Error exiting carousell", e)
+
+        except NoSuchElementException as e:
+            print("Couldn't find new story to watch")
+
+    # Assumes you're on the front page aka your feed. It'll scroll and like pictures, at a lower rate than the ones in /new
+    def scroll_feed(self):
+        #TODO
+        #Scroll until it finds a post already liked
+        #Clicks "more" on descriptions
+        #Clicks "right" on carousell
+        pass
+
+    
+    def be_human(self):
+
+        if self.driver.current_url != self.base_url:
+            self.driver.find_element_by_css_selector('a[href="/"]').click()
+            time.sleep(1.5)
+
+        
+        #TODO: Randomize order in which he does this. random.shuffle() [scroll, watch, scroll]
+        #TODO: He goes to profile sometimes
+
+        # if self.should_randomly_do():
+        print("Scrolling activity feed!")
+        self.scroll_activity_feed()
+        # if self.should_randomly_do():
+        print("Watching new stories!")
+        self.watch_new_stories()
+
+        print("Scrolling feed!")
+        self.scroll_feed()        
+
+    # Assumes you're on front page, and there's a search bar
+    def search_for_hashtag(self, hashtag):
+        # self.driver.get(self.base_url + 'explore/tags/' + hashtag)
+        search = self.driver.find_element_by_css_selector('input[placeholder="Search"]')
+        self.driver.execute_script("arguments[0].click()", search)
+        time.sleep(1.5)
+        search.send_keys("#"+hashtag)
+        time.sleep(2)
+        self.driver.find_element_by_css_selector('div.fuqBx>a[href="/explore/tags/'+hashtag+'/"]').click()
+        time.sleep(4)
+
     def like_posts(self, hashtag, maxLikesPerHashtag):
         current_posts_seen = 0
-        self.driver.get(self.base_url + 'explore/tags/' + hashtag)
-        time.sleep(2)
+        self.search_for_hashtag(hashtag)
+        time.sleep(1)
+
+        self.watch_new_stories("--hashtag")
+        time.sleep(3)
+
+
+        #TODO: Like best posts
+        #TODO
+
+        #Like new posts
+        #TODO: Scroll down to new
         self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/article/div[2]/div/div[1]/div[2]/a').click()
-        time.sleep(5)
+        time.sleep(3)
 
         #For each the post
         while (current_posts_seen < maxLikesPerHashtag and self.likes_given < self.max_likes):
@@ -117,7 +210,7 @@ class InstagramBot(Bot):
         sleepTime = random.randrange(4,16)
         time.sleep(sleepTime)
 
-    # Must be already in instagram logged in
+    # Must be already in instagram in a page with the search bar and must be logged in
     def like_hashtags(self, hashtags):
         
         try:
@@ -131,8 +224,12 @@ class InstagramBot(Bot):
             while(self.likes_given<self.max_likes):
                 for hashtag in hashtags:
                     try:
+
+                        self.be_human()
                         self.like_posts(hashtag, max_likes_per_hashtag)
-                    except NoSuchElementException: 
+
+                    except NoSuchElementException:
+                        print("Forced hashtag switch")
                         pass
                     if(self.likes_given>=self.max_likes):
                         break
@@ -140,22 +237,19 @@ class InstagramBot(Bot):
             self.status = "Success"
         except KeyboardInterrupt:
             self.status = "Aborted"
+            print("keyboard interrupt")
         except ElementClickInterceptedException as e:
-            time.sleep(5)
-            print(e)
-            if self.driver.find_elements_by_xpath("//*[text()='Action Blocked']") != []:
+            time.sleep(0.5)
+            if self.driver.find_elements_by_xpath("//*[contains(text(), 'Action Blocked'])") != []:
                 self.status = "Action Blocked"
+                print(self.username, "was action blocked.")
             else:
                 self.status = "ElementClickedInterceptedException"
+                print("Something weird happened while liking hashtags:", e)
 
         self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
     
-    def be_human(self):
-        print("Hi i'm human")
-        time.sleep(1)
-        self.driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
-        time.sleep(3)
-        activity_feed = self.driver.find_element_by_css_selector('div.uo5MA._2ciX.tWgj8.XWrBI')
+    
 
     def run(self, params):
 
@@ -168,8 +262,6 @@ class InstagramBot(Bot):
             self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
 
             self.login()
-
-            self.be_human()
 
             self.like_hashtags(params[0])
 

@@ -17,7 +17,6 @@ class SubmitHubBot(Bot):
         self.base_url = "https://www.submithub.com/"
         super().__init__(username, password, database)
 
-        self.chrome_options.add_argument("--mute-audio")
 
 
     def login(self):

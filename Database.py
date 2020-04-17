@@ -9,7 +9,7 @@ class Database:
 
     def add_instagram_followers(self, accfollowers):
 
-        insert = ''' INSERT OR IGNORE INTO accFollowers(platform, username, follower, time_detected)
+        insert = ''' INSERT OR REPLACE INTO accFollowers(platform, username, follower, time_detected)
                 VALUES(?, ?, ?, ?)
                     '''
 

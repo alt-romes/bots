@@ -30,7 +30,12 @@ class Bot:
 
         if not ("--debug" in sys.argv):
             self.chrome_options.add_argument("--headless")
+
         self.chrome_options.add_argument("--window-size=1200x800")
+        self.chrome_options.add_argument("--mute-audio")
+        self.chrome_options.add_argument("--disable-extensions")
+        self.chrome_options.add_argument("--disable-notifications")
+        self.chrome_options.add_argument("--enable-automation")
 
         self.chrome_options.add_argument("--user-data-dir=/Users/romes/everything-else/botdev/organized/likebots/profiles/"+self.platform+"/"+username)
 
@@ -54,28 +59,6 @@ class Bot:
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-    def wheel_element(element, deltaY = 120, offsetX = 0, offsetY = 0):
-        error = element._parent.execute_script("""
-            var element = arguments[0];
-            var deltaY = arguments[1];
-            var box = element.getBoundingClientRect();
-            var clientX = box.left + (arguments[2] || box.width / 2);
-            var clientY = box.top + (arguments[3] || box.height / 2);
-            var target = element.ownerDocument.elementFromPoint(clientX, clientY);
-
-            for (var e = target; e; e = e.parentElement) {
-            if (e === element) {
-                target.dispatchEvent(new MouseEvent('mouseover', {view: window, bubbles: true, cancelable: true, clientX: clientX, clientY: clientY}));
-                target.dispatchEvent(new MouseEvent('mousemove', {view: window, bubbles: true, cancelable: true, clientX: clientX, clientY: clientY}));
-                target.dispatchEvent(new WheelEvent('wheel',     {view: window, bubbles: true, cancelable: true, clientX: clientX, clientY: clientY, deltaY: deltaY}));
-                return;
-            }
-            }    
-            return "Element is not interactable";
-            """, element, deltaY, offsetX, offsetY)
-        if error:
-            raise WebDriverException(error)
-
 
     def print_bot_starting(self):
         string = "Starting: " + self.get_username() + " in " + self.get_platform() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
@@ -87,7 +70,8 @@ class Bot:
             else:
                 logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
 
-    def scroll_down(self, element):
+
+    def scroll_down(self, element, modifier=1):
         """A method for scrolling the page."""
 
         # Get scroll height.
@@ -96,7 +80,9 @@ class Bot:
         while True:
 
             # Scroll down to the bottom.
-            self.driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight);", element)
+            for i in range(1, int(1/modifier)+1):
+                self.driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight*arguments[1]);", element, modifier*i)
+                time.sleep(0.1)
 
             # Wait to load the page.
             time.sleep(2)
@@ -109,6 +95,9 @@ class Bot:
                 break
 
             last_height = new_height        
+    
+    def should_randomly_do(self):
+        return random.random() < random.random()
 
 
     def get_posts_liked(self):
@@ -138,8 +127,8 @@ class Bot:
     def get_time_ended(self):
         return self.time_ended
 
-    def should_like_post(self):
-        chanceToLikePost = random.uniform(0.6, 0.85)
+    def should_like_post(self, min=0.6, max=0.85):
+        chanceToLikePost = random.uniform(min, max)
         r = random.random()
         return r <= chanceToLikePost
 
