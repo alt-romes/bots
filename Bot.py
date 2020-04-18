@@ -44,7 +44,6 @@ class Bot:
         
         self.driver = None
 
-        self.posts_liked = []
         self.likes_given = 0
         self.max_likes = "-"
         self.posts_seen = 0
@@ -95,13 +94,6 @@ class Bot:
                 break
 
             last_height = new_height        
-    
-    def should_randomly_do(self):
-        return random.random() < random.random()
-
-
-    def get_posts_liked(self):
-        return self.posts_liked
 
     def get_status(self):
         return self.status
