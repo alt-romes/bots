@@ -5,6 +5,7 @@ from selenium.common.exceptions import ElementClickInterceptedException
 
 #Parent class
 from Bot import Bot
+from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials
 
 #Instagram API module
 from InstagramAPI import InstagramAPI
@@ -13,24 +14,42 @@ import os
 import time
 import datetime
 import random
+import logging
 
 class InstagramBot(Bot):
 
-    def __init__ (self, username, password, database=None):
-        """Creates an Instagram bot. Can be used to get information from an account, or to run jobs. 
-        When done be sure to call the bot method quit()"""
+    def __init__ (self, username='', password='', database=None, page_name=None, token=None, watch_feed_stories=True):
+        """
+        Creates an Instagram bot. Can be used to get information from an account, or to run jobs. 
+        When done be sure to call the bot method quit()
+        
+        TODO: Include description on how to get API TOKEN
+        """
 
-
+        self.watch_feed_stories = watch_feed_stories
         self.platform = "Instagram"
         self.base_url = "https://www.instagram.com/"
-        self.page_name = None
+        self.token = token
+        self.page_name = page_name
         self.hashtag_stories_seen = 0
         self.home_stories_seen = 0
+
+        self.ig_api = None
+        if self.page_name is not None and token is not None:
+            self.ig_api = InstagramAPI(self.page_name, self.token, logf=self.log) #Use parent's logger
 
         super().__init__(username, password, database)
 
 
     def login(self):
+        if self.username=='' or self.password=='':
+            e = NoAccountCredentials()
+            self.log(logging.ERROR, str(e))
+            raise e
+
+        if self.driver is None:
+            self.init_driver()
+
         self.driver.get(self.base_url)
 
         time.sleep(1)
@@ -40,38 +59,111 @@ class InstagramBot(Bot):
             self.driver.find_element_by_name("password").send_keys(self.password, Keys.ENTER)
             time.sleep(2)
         except NoSuchElementException:
-            self.log(self.logging.NOTSET, "Already logged in.")
+            self.log(logging.NOTSET, "Already logged in.")
 
         try:
             self.driver.find_element_by_css_selector('button.bIiDR').click()
             time.sleep(2)
         except NoSuchElementException:
-            self.log(self.logging.NOTSET, "Has already enabled notifications")
+            self.log(logging.NOTSET, "Has already enabled notifications")
 
         try:
-            time.sleep(1)
+            time.sleep(3)
             self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
-            self.log(self.logging.NOTSET, "User's page name is " + self.page_name)
+            self.log(logging.NOTSET, "User's page name is " + self.page_name)
 
         except Exception as e:
-            self.log(self.logging.ERROR, "Couldn't find user's page name" + str(e))
+            self.log(logging.ERROR, "Couldn't find user's page name: " + str(e))
 
         self.is_logged_in = True
-        self.log(self.logging.INFO, "Logged in.")
+        self.log(logging.INFO, "Logged in.")
         time.sleep(1)
 
-    # Must be called from an existing object of this class.
-    def get_followers_list(self):
-        self.driver.get('https://www.instagram.com/{}/'.format(self.username))
+
+    def get_number_of_posts(self):
+        if self.ig_api is not None:
+            all_posts = self.ig_api.get_all_posts()
+            return len(all_posts)
+        else:
+            e = NotConfiguredAPI()
+            self.log(logging.ERROR, str(e))
+            raise e
+
+
+    def get_followers_list(self, username=None):
+        self.log(logging.INFO, "Getting followers list for {}.".format(username))
+        if not self.is_logged_in:
+            e = NotLoggedIn()
+            self.log(logging.ERROR, str(e))
+            raise e
+
+        if username is None:
+            username = self.username
+
+        if self.driver is None:
+            self.init_driver()
+        
+        if username == '':
+            self.log(logging.ERROR, "You must provide a username, or login!")
+            return []
+
+        self.driver.get('https://www.instagram.com/{}/'.format(username))
         time.sleep(5)
-        self.driver.find_element_by_css_selector('a[href="/{}/followers/"]'.format(self.username)).click()
+        self.driver.find_element_by_css_selector('a[href="/{}/followers/"]'.format(username)).click()
         time.sleep(5)
         self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
         time.sleep(2)
         followers = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
         follower_list = [follower.text for follower in followers]
-        self.log(self.logging.INFO, "Looked up followers list")
+        self.log(logging.INFO, "Looked up followers list from {}.".format(username))
+
+        if self.db is not None and username==self.username:
+            self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), follower_list ) ) )
+
         return follower_list
+
+
+    def get_following_list(self, username=None):
+        self.log(logging.INFO, "Getting following list for {}.".format(username))
+        if not self.is_logged_in:
+            e = NotLoggedIn()
+            self.log(logging.ERROR, str(e))
+            raise e
+
+        if username is None:
+            username = self.username
+        if self.driver is None:
+            self.init_driver()
+
+        if username == '':
+            self.log(logging.ERROR, "You must provide a username or login!")
+            return []
+
+        self.driver.get('https://www.instagram.com/{}/'.format(username))
+        time.sleep(5)
+        self.driver.find_element_by_css_selector('a[href="/{}/following/"]'.format(username)).click()
+        time.sleep(5)
+        self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
+        time.sleep(2)
+        followers = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
+        follower_list = [follower.text for follower in followers]
+        self.log(logging.INFO, "Looked up following list from {}.".format(username))
+        
+        return follower_list
+
+
+    def get_not_following_back(self, username=None):
+        self.log(logging.INFO, "Getting users not following back for {}.".format(username))
+        if username is None:
+            username = self.username
+
+        if username == '':
+            self.log(logging.ERROR, "You must provide a username or login!")
+            return
+
+        followers_list = self.get_followers_list(username)
+        users = [user for user in self.get_following_list(username) if user not in followers_list] 
+        return users
 
 
     def get_unfollowers_list(self):
@@ -90,46 +182,50 @@ class InstagramBot(Bot):
             time.sleep(3)
             self.driver.execute_script('arguments[0].click();' ,self.driver.find_element_by_css_selector('div.wgVJm'))
             time.sleep(1)
-            self.log(self.logging.INFO, "Scrolled activity feed.")
+            self.log(logging.INFO, "Scrolled activity feed.")
         except Exception as e:
-            self.log(self.logging.ERROR, "Error scrolling activity feed: " + str(e))
+            self.log(logging.ERROR, "Error scrolling activity feed: " + str(e))
 
 
     # It'll only watch new stories, mode="--home" if you're watching stories of who you follow, mode="--hashtag" if you're watching stories with a hashtag
     def watch_new_stories(self, mode="--home"):
 
         try:
-            if mode=="--home":
+            if mode=="--home" and not self.watch_feed_stories:
+                self.log(logging.INFO, "Not watching feed stories.")
+                return
+            elif mode=="--home" and self.watch_feed_stories:
                 canvas = self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/section/div[3]/div[2]/div[2]/div/div/div/div[1]/button[@class="jZyv1  H-yu6"]/div[1]/canvas') #('button.jZyv1.H-yu6>div>canvas.CfWVH[height="44"]')
                 if int(canvas.get_attribute("height")) % 11 == 0:
                     self.driver.find_element_by_css_selector('button.jZyv1.H-yu6>div>span>img._6q-tv').click()
-            elif mode=="--hashtag":
+            else:
                 self.driver.find_element_by_css_selector('div.T7reQ._0FuTv.pkWJh>div>div>img').click()
             time.sleep(2)
-            self.log(self.logging.INFO, "Watching new stories in " + mode + ".")
+            self.log(logging.INFO, "Watching new stories in --" + mode + ".")
             while True:
                 try:
-                    if mode=="--hashtag":
-                        self.hashtag_stories_seen+=1
-                    elif mode=="--home":
+                    if mode=="--home":
                         self.home_stories_seen+=1
+                    else:
+                        self.hashtag_stories_seen+=1
                     self.driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
-                    self.log(self.logging.INFO, "Watched a story.")
+                    self.log(logging.INFO, "Watched a story.")
                     time.sleep(random.uniform(0.5, 2))
                 except Exception as e:
-                    self.log(self.logging.WARNING, "While clicking skip story: " + str(e))
+                    self.log(logging.WARNING, "While clicking skip story: " + str(e))
                 finally:
                     try:
                         self.driver.find_element_by_css_selector('section.carul')
                     except NoSuchElementException:
-                        self.log(self.logging.INFO, 'Finished watching stories.')
+                        self.log(logging.INFO, 'Finished watching stories.')
                         break
                     except Exception:
-                        self.log(self.logging.ERROR, "Error exiting carousell " + str(e))
+                        self.log(logging.ERROR, "Error exiting carousell " + str(e))
 
         except NoSuchElementException as e:
             # No available story to watch
-            self.log(self.logging.INFO, 'No story available to watch.')
+            self.log(logging.INFO, 'No story available to watch.')
+
 
     # Assumes you're on the front page aka your feed. It'll scroll and like pictures, at a lower rate than the ones in /new
     def scroll_feed(self):
@@ -150,7 +246,7 @@ class InstagramBot(Bot):
     #Assumes you're on a page that has a clickable instagram reference to home page ( like their logo )
     def be_human(self):
 
-        self.log(self.logging.INFO, "Being human!")
+        self.log(logging.INFO, "Being human!")
         if self.driver.current_url != self.base_url:
             self.driver.find_element_by_css_selector('a[href="/"]').click()
             time.sleep(1.5)
@@ -161,7 +257,7 @@ class InstagramBot(Bot):
         for action in actions:
             if random.random() < 0.8:
                 action()
-        self.log(self.logging.INFO, "Was human!")
+        self.log(logging.INFO, "Was human!")
 
 
     # Assumes you're on front page, and there's a search bar
@@ -171,13 +267,13 @@ class InstagramBot(Bot):
             self.driver.execute_script("arguments[0].click();", search)
             time.sleep(1.5)
             search.send_keys("#"+hashtag)
-            time.sleep(2)
+            time.sleep(4)
             self.driver.find_element_by_css_selector('div.fuqBx>a[href="/explore/tags/'+hashtag+'/"]').click()
             time.sleep(4)
-            self.log(self.logging.INFO, "Searched for hashtag succesfully.")
+            self.log(logging.INFO, "Searched for hashtag succesfully.")
         except Exception as e:
-            self.log(self.logging.ERROR, "Error searching for hashtag: " + str(e))
-            self.log(self.logging.WARNING, "Changing URL directly. . .")
+            self.log(logging.ERROR, "Error searching for hashtag: " + str(e))
+            self.log(logging.WARNING, "Changing URL directly. . .")
             self.driver.get(self.base_url + 'explore/tags/' + hashtag)
 
 
@@ -220,7 +316,7 @@ class InstagramBot(Bot):
                     
 
                 self.likes_given+=1
-                self.log(self.logging.INFO, "Liked a post.")
+                self.log(logging.INFO, "Liked a post.")
 
                 #TODO: Randomly call function to check this profile, and if meets conditions, is followed and added to the DB.
             
@@ -259,7 +355,7 @@ class InstagramBot(Bot):
                     time.sleep(1)
 
                     if random.random() < 0.8:
-                        self.watch_new_stories("--hashtag")
+                        self.watch_new_stories(hashtag)
                         time.sleep(3)
 
                     try:
@@ -268,28 +364,28 @@ class InstagramBot(Bot):
                             time.sleep(2)
 
                     except NoSuchElementException as e:
-                        self.log(self.logging.WARNING, "Forced hashtag switch: " + str(e))
+                        self.log(logging.WARNING, "Forced hashtag switch: " + str(e))
 
                     if(self.likes_given>=self.max_likes):
                         break
 
                 time.sleep(random.randrange(4, 8))
             self.status = "Success"
-            self.log(self.logging.INFO, "Finished the like job.")
+            self.log(logging.INFO, "Finished the like job.")
         #Handle errors
         except ElementClickInterceptedException as e:
             time.sleep(0.5)
             if self.driver.find_elements_by_xpath("//*[contains(text(), 'Action Blocked')]") != []:
                 self.status = "Action Blocked"
-                self.log(self.logging.CRITICAL, "Was action blocked!")
+                self.log(logging.CRITICAL, "Was action blocked!")
             else:
-                self.log(self.logging.ERROR, "While liking hashtags: " + str(e))
+                self.log(logging.ERROR, "While liking hashtags: " + str(e))
         except KeyboardInterrupt as e:
             self.status = "KeyboardInterrupt"
             raise e
 
         except Exception as e:
-            self.log(self.logging.ERROR, str(e))
+            self.log(logging.ERROR, str(e))
             raise e
         
         #Update database
@@ -300,7 +396,7 @@ class InstagramBot(Bot):
                     self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), now, self.get_posts_seen()))
                     self.db.create_instagram_likejob((self.get_platform(), self.get_username(), now, self.hashtag_stories_seen, self.home_stories_seen))
                 except Exception as e:
-                    self.log(self.logging.ERROR, "Error inserting row in a likejob table! " + str(e))
+                    self.log(logging.ERROR, "Error inserting row in a likejob table! " + str(e))
     
     
     def run(self, params):
@@ -310,6 +406,12 @@ class InstagramBot(Bot):
 
             super().print_bot_starting()
 
+            if self.username == "romesrf":
+                self.login()
+                self.log(logging.INFO, "Users not following you back: \n"+str(self.get_not_following_back()))
+                self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
+                
+
             if(self.max_likes>0):
                 self.init_driver()
 
@@ -317,8 +419,7 @@ class InstagramBot(Bot):
 
                 self.like_hashtags(params[0])
 
-                if self.db is not None:
-                    self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), self.get_followers_list() ) ) )
+                self.get_followers_list()
 
         finally:
             self.quit()

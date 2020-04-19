@@ -25,7 +25,7 @@ class SubmitHubBot(Bot):
         time.sleep(5)
 
         if (self.driver.current_url != login_url):
-            self.log(self.logging.NOTSET, "Already logged in.")
+            self.log(logging.NOTSET, "Already logged in.")
             self.is_logged_in = True
             return
 
@@ -35,7 +35,7 @@ class SubmitHubBot(Bot):
         self.is_logged_in = True
         time.sleep(5)
 
-        self.log(self.logging.INFO, "Logged in.")
+        self.log(logging.INFO, "Logged in.")
 
     def listen_time(self):
         return random.randrange(49, 81)
@@ -68,7 +68,7 @@ class SubmitHubBot(Bot):
         time.sleep(random.randrange(8, 16))
         self.driver.find_element_by_class_name('skip-next').click()
         self.likes_given+=1
-        self.log(self.logging.INFO, "Liked this music.")
+        self.log(logging.INFO, "Liked this music.")
 
 
     def hot_or_not(self):
@@ -85,7 +85,7 @@ class SubmitHubBot(Bot):
             raise e
 
         except Exception as e:
-            self.log(self.logging.ERROR, str(e))
+            self.log(logging.ERROR, str(e))
 
         finally:
             self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
@@ -102,7 +102,7 @@ class SubmitHubBot(Bot):
                 self.login()
                 self.hot_or_not()
         except Exception as e:
-            self.log(self.logging.ERROR, str(e))
+            self.log(logging.ERROR, str(e))
         finally:
             self.quit()
 

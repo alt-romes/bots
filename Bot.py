@@ -75,14 +75,13 @@ class Bot:
 
         user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
         self.chrome_options.add_argument("--user-data-dir=" + user_data_dir)
-        self.log(logging.INFO, "Chrome --user-data-dir set to " + user_data_dir)
+        self.log(logging.NOTSET, "Chrome --user-data-dir set to " + user_data_dir)
 
 
     def _init_logger(self):
         logging.addLevelName(self.FINISHED_LEVEL, "FINISHED")
         format = '%(asctime)s | %(levelname)8s | %(platform)9s | %(username)s > %(message)s'
         logging.basicConfig(format=format, datefmt='%Y-%m-%d %H:%M:%S')
-        self.logging = logging
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -99,7 +98,7 @@ class Bot:
         try:
             self.driver = webdriver.Chrome(executable_path="chromedriver", options=self.chrome_options)
         except Exception as e:
-            self.log(self.logging.ERROR, "While setting up driver: " + str(e))
+            self.log(logging.ERROR, "While setting up driver: " + str(e))
             raise e
 
     # Level is of type int, call using logging.LEVEL (ex: logging.WARNING)
@@ -108,6 +107,9 @@ class Bot:
         extra = {'platform': self.platform, 'username': self.username}
         self.logger.log(level, msg, extra=extra)
 
+        if msg == '':
+            msg = "No error message :("
+            
         #Send message to discord
         if level >= logging.ERROR:
             discord_message = {
@@ -117,7 +119,7 @@ class Bot:
             try:
                 r = requests.post(config.ERROR_WEBHOOK, data=discord_message)
             except Exception as e:
-                self.log(self.logging.ERROR, "Failed post to discord: " + str(e))
+                self.log(logging.ERROR, "Failed post to discord: " + str(e))
 
             time.sleep(2)
             try: 

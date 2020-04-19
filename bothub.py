@@ -20,7 +20,7 @@ from config import credentials
 #Params
 from config import params
 
-#Run with param --no-interface to hide interface 
+#Run with param --curses to use curses interface
 def interface(stdscr, running_bots, finished_bots, threads): #stdscr, 
     time.sleep(1)
 
@@ -108,7 +108,7 @@ def run_bots(bots):
         threads.append(x)
         x.start()
 
-    if not ( ("--no-interface" in sys.argv) or ("--debug" in sys.argv) ) :
+    if  "--curses" in sys.argv :
         curses.wrapper(interface, running_bots, finished_bots, threads)
 
     for i, thread in enumerate(threads):
@@ -118,11 +118,12 @@ def run_bots(bots):
 def create_bots(db):
 
     igbots = []
-    for i in range(len(credentials['instagram'])): #instagram
+    igbots.append(InstagramBot(credentials['instagram'][0]['username'], credentials['instagram'][0]['password'], db, credentials['instagram'][0]['page_name'], credentials['instagram'][0]['token']))
+    for i in range(1, len(credentials['instagram'])): #instagram
         igbots.append(InstagramBot(credentials['instagram'][i]['username'], credentials['instagram'][i]['password'], db))
     igbots2 = []
     for i in range(len(credentials['instagram2'])): #mom's instagram
-        igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password'], db))
+        igbots2.append(InstagramBot(credentials['instagram2'][i]['username'], credentials['instagram2'][i]['password'], db, watch_feed_stories=False))
     ttbots = []
     for i in range(len(credentials['twitter'])):
         ttbots.append(TwitterBot(credentials['twitter'][i]['username'], credentials['twitter'][i]['password'], db))
