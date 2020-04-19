@@ -91,6 +91,10 @@ class InstagramBot(Bot):
 
 
     def get_followers_list(self, username=None):
+        """
+        Gets followers list for a username, if none provided, your username is used
+        Accounts must be public
+        """
         self.log(logging.INFO, "Getting followers list for {}.".format(username))
         if not self.is_logged_in:
             e = NotLoggedIn()
@@ -99,12 +103,9 @@ class InstagramBot(Bot):
 
         if username is None:
             username = self.username
-
-        if self.driver is None:
-            self.init_driver()
         
         if username == '':
-            self.log(logging.ERROR, "You must provide a username, or login!")
+            self.log(logging.ERROR, "You must provide a username, or be logged in!")
             return []
 
         self.driver.get('https://www.instagram.com/{}/'.format(username))
@@ -124,6 +125,10 @@ class InstagramBot(Bot):
 
 
     def get_following_list(self, username=None):
+        """
+        Gets following list for a username, if none provided, your username is used
+        Accounts must be public
+        """
         self.log(logging.INFO, "Getting following list for {}.".format(username))
         if not self.is_logged_in:
             e = NotLoggedIn()
@@ -408,7 +413,7 @@ class InstagramBot(Bot):
 
             if self.username == "romesrf":
                 self.login()
-                self.log(logging.INFO, "Users not following you back: \n"+str(self.get_not_following_back("antmancancar")))
+                self.log(logging.INFO, "Users not following you back: \n"+str(self.get_not_following_back("_soopm")))
                 self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
                 
 
