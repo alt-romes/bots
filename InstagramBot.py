@@ -23,7 +23,7 @@ class InstagramBot(Bot):
         Creates an Instagram bot. Can be used to get information from an account, or to run jobs. 
         When done be sure to call the bot method quit()
         
-        TODO: Include description on how to get API TOKEN
+        Get API Token from Facebook Graph API.
         """
 
         self.watch_feed_stories = watch_feed_stories
@@ -42,6 +42,7 @@ class InstagramBot(Bot):
 
 
     def login(self):
+
         if self.username=='' or self.password=='':
             e = NoAccountCredentials()
             self.log(logging.ERROR, str(e))
@@ -54,26 +55,28 @@ class InstagramBot(Bot):
 
         time.sleep(1)
 
+        self.log(logging.INFO, "Logging in. . .")
+
         try:
             self.driver.find_element_by_name("username").send_keys(self.username)
             self.driver.find_element_by_name("password").send_keys(self.password, Keys.ENTER)
             time.sleep(2)
         except NoSuchElementException:
-            self.log(logging.NOTSET, "Already logged in.")
+            self.log(logging.INFO, "Already logged in.")
 
         try:
             self.driver.find_element_by_css_selector('button.bIiDR').click()
             time.sleep(2)
         except NoSuchElementException:
-            self.log(logging.NOTSET, "Has already enabled notifications")
+            self.log(logging.INFO, "Has already enabled notifications")
 
         try:
             time.sleep(3)
             self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
-            self.log(logging.NOTSET, "User's page name is " + self.page_name)
+            self.log(logging.DEBUG, "User's page name is " + self.page_name)
 
         except Exception as e:
-            self.log(logging.ERROR, "Couldn't find user's page name: " + str(e))
+            self.log(logging.DEBUG, "Couldn't find user's page name: " + str(e))
 
         self.is_logged_in = True
         self.log(logging.INFO, "Logged in.")
@@ -90,12 +93,14 @@ class InstagramBot(Bot):
             raise e
 
 
-    def get_followers_list(self, username=None):
+    def get_follows_list(self, username=None, mode="followers"):
         """
-        Gets followers list for a username, if none provided, your username is used
+        Gets followers or following list for a username, if none provided, your username is used
         Accounts must be public
+        Mode: followers to get followers
+        Mode: following to get following
         """
-        self.log(logging.INFO, "Getting followers list for {}.".format(username))
+        self.log(logging.INFO, "Getting followers list for {}. . .".format(username))
         if not self.is_logged_in:
             e = NotLoggedIn()
             self.log(logging.ERROR, str(e))
@@ -109,56 +114,23 @@ class InstagramBot(Bot):
             return []
 
         self.driver.get('https://www.instagram.com/{}/'.format(username))
-        time.sleep(5)
-        self.driver.find_element_by_css_selector('a[href="/{}/followers/"]'.format(username)).click()
-        time.sleep(5)
-        self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
         time.sleep(2)
-        followers = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
-        follower_list = [follower.text for follower in followers]
-        self.log(logging.INFO, "Looked up followers list from {}.".format(username))
-
-        if self.db is not None and username==self.username:
-            self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), follower_list ) ) )
-
-        return follower_list
-
-
-    def get_following_list(self, username=None):
-        """
-        Gets following list for a username, if none provided, your username is used
-        Accounts must be public
-        """
-        self.log(logging.INFO, "Getting following list for {}.".format(username))
-        if not self.is_logged_in:
-            e = NotLoggedIn()
-            self.log(logging.ERROR, str(e))
-            raise e
-
-        if username is None:
-            username = self.username
-        if self.driver is None:
-            self.init_driver()
-
-        if username == '':
-            self.log(logging.ERROR, "You must provide a username or login!")
-            return []
-
-        self.driver.get('https://www.instagram.com/{}/'.format(username))
-        time.sleep(5)
-        self.driver.find_element_by_css_selector('a[href="/{}/following/"]'.format(username)).click()
-        time.sleep(5)
+        self.driver.find_element_by_css_selector('a[href="/{}/{}/"]'.format(username, mode)).click()
+        time.sleep(1)
         self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
-        time.sleep(2)
-        followers = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
-        follower_list = [follower.text for follower in followers]
-        self.log(logging.INFO, "Looked up following list from {}.".format(username))
-        
-        return follower_list
+        time.sleep(1)
+        follows = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
+        follows_list = [follow.text for follow in follows]
+        self.log(logging.INFO, "Looked up {} list from {}.".format(mode, username))
+
+        if self.db is not None and username==self.username and mode=="follower":
+            self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), follows_list ) ) )
+
+        return follows_list
 
 
     def get_not_following_back(self, username=None):
-        self.log(logging.INFO, "Getting users not following back for {}.".format(username))
+        self.log(logging.INFO, "Getting users not following back for {}. . .".format(username))
         if username is None:
             username = self.username
 
@@ -166,8 +138,8 @@ class InstagramBot(Bot):
             self.log(logging.ERROR, "You must provide a username or login!")
             return
 
-        followers_list = self.get_followers_list(username)
-        users = [user for user in self.get_following_list(username) if user not in followers_list] 
+        followers_list = self.get_follows_list(username, mode="followers")
+        users = [user for user in self.get_follows_list(username, mode="following") if user not in followers_list] 
         return users
 
 
@@ -411,10 +383,10 @@ class InstagramBot(Bot):
 
             super().print_bot_starting()
 
-            if self.username == "romesrf":
+            if self.username == "rodrigommesquita":
                 self.login()
-                self.log(logging.INFO, "Users not following you back: \n"+str(self.get_not_following_back("_soopm")))
-                self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
+                self.log(logging.INFO, "Users not following back: \n"+str(self.get_not_following_back("romesrf")))
+                # self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
                 
 
             if(self.max_likes>0):

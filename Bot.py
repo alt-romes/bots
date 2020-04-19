@@ -109,7 +109,7 @@ class Bot:
 
         if msg == '':
             msg = "No error message :("
-            
+
         #Send message to discord
         if level >= logging.ERROR:
             discord_message = {
@@ -149,8 +149,8 @@ class Bot:
                 self.driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight*arguments[1]);", element, modifier*i)
                 time.sleep(0.1)
 
-            # Wait to load the page.
-            time.sleep(2)
+            # Wait to load more followers.
+            time.sleep(1)
 
             # Calculate new scroll height and compare with last scroll height.
             new_height = self.driver.execute_script("return arguments[0].scrollHeight", element)
@@ -191,7 +191,7 @@ class Bot:
         return r <= chanceToLikePost
         
     def get_report_string(self):
-        return "This method must be implemented by subclasses! Also, I should learn how OOP works in python..."
+        return "This method must be implemented by subclasses! Also, I should learn better how OOP works in python..."
 
     def quit(self):
         if self.get_likes_given()<self.get_max_likes() or self.get_max_likes()>0:
