@@ -408,7 +408,7 @@ class InstagramBot(Bot):
 
             if self.username == "romesrf":
                 self.login()
-                self.log(logging.INFO, "Users not following you back: \n"+str(self.get_not_following_back()))
+                self.log(logging.INFO, "Users not following you back: \n"+str(self.get_not_following_back("antmancancar")))
                 self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
                 
 

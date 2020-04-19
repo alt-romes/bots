@@ -9,9 +9,8 @@ Running:
 ```bash
 python bothub.py
 
-python bothub.py --no-interface
-
-python bothub.py --no-interface --no-colors
+to use curses interface: (might be buggy, stopped using it very soon)
+python bothub.py --curses  
 ```
 
-`--no-colors` can be used in a crontab, so the color codes aren't printed
+`export PATH and cd into directory` if using crontab
