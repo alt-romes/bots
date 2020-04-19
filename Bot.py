@@ -1,3 +1,4 @@
+#External Dependencies
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
@@ -5,27 +6,49 @@ from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import WebDriverException
 
 import logging
+import logging.handlers
 import os
 import datetime
 import time
 import random
 import sys
-
-from bcolors import bcolors
+import requests
+import json
 
 from Database import Database
 
+import config
+
 class Bot:
+
+    FINISHED_LEVEL = 42
+    LOG_FILENAME = 'logs/bots.log'
 
     def __init__(self, username, password, database_path=None):
         self.username = username
         self.password = password
-        self.db = None
 
+        self.db = None
         if database_path is not None:
             self.db = Database(database_path)
             self.db.create_account((self.get_username(), self.get_platform()))
 
+        self.driver = None
+        self._config_chromedriver()
+
+        self.likes_given = 0
+        self.max_likes = "-"
+        self.posts_seen = 0
+        self.time_started = datetime.datetime.now()
+        self.time_ended = 0
+
+        self.status = "Unknown Failure"
+
+        self.is_logged_in = False
+
+        self._init_logger()
+
+    def _config_chromedriver(self):
         self.chrome_options = webdriver.ChromeOptions()
 
         if not ("--debug" in sys.argv):
@@ -37,37 +60,57 @@ class Bot:
         self.chrome_options.add_argument("--disable-notifications")
         self.chrome_options.add_argument("--enable-automation")
 
-        self.chrome_options.add_argument("--user-data-dir=/Users/romes/everything-else/botdev/organized/likebots/profiles/"+self.platform+"/"+username)
+        self.chrome_options.add_argument("--user-data-dir=/Users/romes/everything-else/botdev/organized/likebots/profiles/"+self.platform+"/"+self.username)
 
-        self.username = username
-        self.password = password
-        
-        self.driver = None
 
-        self.likes_given = 0
-        self.max_likes = "-"
-        self.posts_seen = 0
+    def _init_logger(self):
+        logging.addLevelName(self.FINISHED_LEVEL, "FINISHED")
+        format = '%(asctime)s | %(levelname)8s | %(platform)9s | %(username)s > %(message)s'
+        logging.basicConfig(format=format, datefmt='%Y-%m-%d %H:%M:%S')
+        self.logging = logging
 
-        self.time_started = datetime.datetime.now()
-        self.time_ended = 0
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
 
-        self.status = "Unknown Failure"
+        # Remove all extra handlers. Needs to be redone if I ever need more than one handler - or want to clean this up in a way that handlers don't overlap ?
+        if self.logger.handlers:
+            self.logger.handlers.clear()
 
-        self.is_logged_in = False
+        handler = logging.handlers.RotatingFileHandler(self.LOG_FILENAME, maxBytes=20000000, backupCount=2) #Max size = 20 MB
+        handler.setFormatter(logging.Formatter(format, datefmt='%Y-%m-%d %H:%M:%S'))
+        self.logger.addHandler(handler)
 
-        format = "%(asctime)s: %(message)s"
-        logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+    # Level is of type int, call using logging.LEVEL (ex: logging.WARNING)
+    # Msg is the string to log
+    def log(self, level, msg):
+        extra = {'platform': self.platform, 'username': self.username}
+        self.logger.log(level, msg, extra=extra)
+
+        #Send message to discord
+        if level >= logging.ERROR:
+            discord_message = {
+                "content": msg[:2000],
+                "username": self.username + " (" + self.platform + ")"
+            }
+            try:
+                r = requests.post(config.ERROR_WEBHOOK, data=discord_message)
+            except Exception as e:
+                self.log(self.logging.ERROR, "Failed post to discord: " + str(e))
+
+            time.sleep(2)
+            try: 
+                r.raise_for_status()
+            except requests.exceptions.HTTPError as e: 
+                self.log(logging.WARNING, "Failed post to discord : " + str(e))
 
 
     def print_bot_starting(self):
-        string = "Starting: " + self.get_username() + " in " + self.get_platform() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
-        if("--no-colors" in sys.argv):
-            logging.info(string)
+        string = self.get_username() + " in " + self.get_platform() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]"
+        if self.get_max_likes()<1:
+            self.log(logging.WARNING, "Uninitiated: " + string)
         else:
-            if self.get_max_likes()<1:
-                logging.info(bcolors.WARNING + string + bcolors.ENDC)
-            else:
-                logging.info(bcolors.OKBLUE + string + bcolors.ENDC)
+            self.log(logging.INFO, "Starting: " + string)
 
 
     def scroll_down(self, element, modifier=1):
@@ -123,24 +166,18 @@ class Bot:
         chanceToLikePost = random.uniform(min, max)
         r = random.random()
         return r <= chanceToLikePost
+        
+    def get_report_string(self):
+        return "This method must be implemented by subclasses! Also, I should learn how OOP works in python..."
 
     def quit(self):
-        string = ("Finished: " + self.get_username() + " in " + self.get_platform() + " [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ]")
-        if("--no-colors" in sys.argv):
-            logging.info(string)
-        else:
-            if self.get_likes_given()<self.get_max_likes():
-                logging.info(bcolors.FAIL + string + bcolors.ENDC)
-            elif self.get_max_likes()==0:
-                logging.info(bcolors.WARNING + string + bcolors.ENDC)
-            else:
-                logging.info(bcolors.OKGREEN + string + bcolors.ENDC)
+        if self.get_likes_given()<self.get_max_likes() or self.get_max_likes()>0:
+            self.log(self.FINISHED_LEVEL, self.get_report_string())
 
         self.time_ended = datetime.datetime.now()
         
         if self.db is not None:
             self.db.close()
-
 
         if self.driver is not None:
             self.driver.quit()

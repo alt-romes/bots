@@ -1,11 +1,8 @@
 .gitignore
-dbbots.db
 config.py
-credentials.py
+dbbots.db
+backupdbbots.db
 profiles
-profiles/*
+logs
 __pycache__
-__pycache__/*
-__pycache__/credentials.cpython-37.pyc
-__pycache__/config.cpython-37.pyc
 .DS_Store

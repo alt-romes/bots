@@ -31,6 +31,7 @@ class TwitterBot(Bot):
         time.sleep(5)
 
         if (self.driver.current_url != login_url):
+            self.log(self.logging.NOTSET, "Already logged in.")
             self.is_logged_in = True
             return        
 
@@ -41,6 +42,8 @@ class TwitterBot(Bot):
         self.is_logged_in = True
 
         time.sleep(2)
+
+        self.log(self.logging.INFO, "Logged in.")
 
 
     def like_posts(self, hashtag, maxLikesPerHashtag):
@@ -65,8 +68,9 @@ class TwitterBot(Bot):
                         current_posts_seen += 1
                         self.likes_given+=1
                         liked=True
+                        self.log(self.logging.INFO, "Liked tweet.")
                     except ElementClickInterceptedException:
-                        pass
+                        self.log(self.logging.NOTSET, "Twitter scrolling by. . .")
                 else:
                     hearts = self.driver.find_elements_by_css_selector("div[data-testid='like']")
                 body.send_keys(Keys.DOWN)
@@ -94,11 +98,9 @@ class TwitterBot(Bot):
                 time.sleep(random.randrange(4, 8))
 
             self.status = "Success"
-        except KeyboardInterrupt:
-            self.status = "Aborted"
-        except:
-            pass
-        
+        except Exception as e:
+            self.log(self.logging.ERROR, str(e))
+
         self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
 
     def run(self, params):
@@ -115,3 +117,6 @@ class TwitterBot(Bot):
             self.like_hashtags(params[0])
 
         self.quit()
+    
+    def get_report_string(self):
+        return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] tweets.")

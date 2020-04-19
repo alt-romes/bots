@@ -61,6 +61,16 @@ class Database:
         cur.execute(insert, likejob)
         self.conn.commit()
 
+    def create_instagram_likejob(self, likejob_ig):
+
+        insert = ''' INSERT INTO likeJobsInstagram(platform, username, time_start, hashtag_stories_seen, home_stories_seen)
+                VALUES(?, ?, ?, ?, ?)
+                    '''
+
+        cur = self.conn.cursor()
+        cur.execute(insert, likejob_ig)
+        self.conn.commit()
+
         
     def create_account(self, account):
 
@@ -142,12 +152,23 @@ class Database:
                                                 PRIMARY KEY (username, platform, follower)
                                             ); """
 
+            likejobsinstagram_table = """ CREATE TABLE IF NOT EXISTS likeJobsInstagram (
+                                                platform text NOT NULL,
+                                                username text NOT NULL,
+                                                time_start timestamp,
+                                                hashtag_stories_seen integer NOT NULL,
+                                                home_stories_seen integer NOT NULL,
+                                                FOREIGN KEY (username, platform, time_start) REFERENCES likeJob (username, platform, time_start),
+                                                PRIMARY KEY (username, platform, time_start)
+                                            ); """
+
             self.create_table(accounts_table)
             self.create_table(likejobs_table)
             self.create_table(acchashtags_table)
             self.create_table(likedposts_table)
             self.create_table(likedpostshashtags_table)
             self.create_table(accfollowers_table)
+            self.create_table(likejobsinstagram_table)
         
         else:
             print("Error connecting to database!")

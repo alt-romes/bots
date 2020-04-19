@@ -20,10 +20,7 @@ from config import credentials
 #Params
 from config import params
 
-#Run with param --no-interface to hide interface
-#Run the crontab with param --no-interface --no-colors 
-
-
+#Run with param --no-interface to hide interface 
 def interface(stdscr, running_bots, finished_bots, threads): #stdscr, 
     time.sleep(1)
 
@@ -142,8 +139,8 @@ def create_bots(db):
 
 
 def main():
-    format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+    # format = "%(asctime)s: %(message)s"
+    # logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
     db = "/Users/romes/everything-else/botdev/organized/likebots/dbbots.db"
 
