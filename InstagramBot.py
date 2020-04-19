@@ -82,7 +82,6 @@ class InstagramBot(Bot):
     # Assumes you're in a page with the activity feed button (notifications hear)
     def scroll_activity_feed(self):
         try:
-            # print("Scrolling activity feed!")
             time.sleep(1)
             self.driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
             time.sleep(3)
@@ -91,9 +90,9 @@ class InstagramBot(Bot):
             time.sleep(3)
             self.driver.execute_script('arguments[0].click();' ,self.driver.find_element_by_css_selector('div.wgVJm'))
             time.sleep(1)
-            self.log(self.logging.INFO, "Scrolled activity feed")
+            self.log(self.logging.INFO, "Scrolled activity feed.")
         except Exception as e:
-            self.log(self.logging.ERROR, "Error scrolling activity feed" + str(e))
+            self.log(self.logging.ERROR, "Error scrolling activity feed: " + str(e))
 
 
     # It'll only watch new stories, mode="--home" if you're watching stories of who you follow, mode="--hashtag" if you're watching stories with a hashtag
@@ -107,7 +106,7 @@ class InstagramBot(Bot):
             elif mode=="--hashtag":
                 self.driver.find_element_by_css_selector('div.T7reQ._0FuTv.pkWJh>div>div>img').click()
             time.sleep(2)
-            self.log(self.logging.INFO, "Watching new stories in " + mode + " .")
+            self.log(self.logging.INFO, "Watching new stories in " + mode + ".")
             while True:
                 try:
                     if mode=="--hashtag":
@@ -115,9 +114,10 @@ class InstagramBot(Bot):
                     elif mode=="--home":
                         self.home_stories_seen+=1
                     self.driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
+                    self.log(self.logging.INFO, "Watched a story.")
                     time.sleep(random.uniform(0.5, 2))
                 except Exception as e:
-                    self.log(self.logging.WARNING, "Couldn't find arrow when skipping story. Maybe did it too fast. . ." + str(e))
+                    self.log(self.logging.WARNING, "While clicking skip story: " + str(e))
                 finally:
                     try:
                         self.driver.find_element_by_css_selector('section.carul')
@@ -174,7 +174,7 @@ class InstagramBot(Bot):
             time.sleep(2)
             self.driver.find_element_by_css_selector('div.fuqBx>a[href="/explore/tags/'+hashtag+'/"]').click()
             time.sleep(4)
-            self.log(self.logging.INFO, "Searched for hashtag succesfully")
+            self.log(self.logging.INFO, "Searched for hashtag succesfully.")
         except Exception as e:
             self.log(self.logging.ERROR, "Error searching for hashtag: " + str(e))
             self.log(self.logging.WARNING, "Changing URL directly. . .")
@@ -239,35 +239,33 @@ class InstagramBot(Bot):
     # Must be already in instagram in a page with the search bar and must be logged in
     def like_hashtags(self, hashtags):
 
+        #Add to database hashtags chosen by user
+        if self.db is not None:
+            self.db.add_account_hashtags( list( map( (lambda hashtag: (self.get_username(), self.get_platform(), hashtag)), hashtags) ) )
+
+        #Prepare number of likes to give, and order of hashtags
+        mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
+        max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
+        random.shuffle(hashtags)
+
         try:
-            #Add to database hashtags chosen by user
-            if self.db is not None:
-                self.db.add_account_hashtags( list( map( (lambda hashtag: (self.get_username(), self.get_platform(), hashtag)), hashtags) ) )
-
-            #Prepare number of likes to give, and order of hashtags
-            mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
-            max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
-            random.shuffle(hashtags)
-            
-
             while(self.likes_given<self.max_likes):
                 for hashtag in hashtags:
+
+                    #Already randomized
+                    self.be_human()
+
+                    self.search_for_hashtag(hashtag)
+                    time.sleep(1)
+
+                    if random.random() < 0.8:
+                        self.watch_new_stories("--hashtag")
+                        time.sleep(3)
+
                     try:
-
-                        #Already randomized
-                        self.be_human()
-
-                        self.search_for_hashtag(hashtag)
-                        time.sleep(1)
-
-                        if random.random() < 0.8:
-                            self.watch_new_stories("--hashtag")
-                            time.sleep(3)
-
                         if random.random() < 0.8:
                             self.like_posts(hashtag, max_likes_per_hashtag)
                             time.sleep(2)
-
 
                     except NoSuchElementException as e:
                         self.log(self.logging.WARNING, "Forced hashtag switch: " + str(e))
@@ -285,38 +283,46 @@ class InstagramBot(Bot):
                 self.status = "Action Blocked"
                 self.log(self.logging.CRITICAL, "Was action blocked!")
             else:
-                self.status = "ElementClickedInterceptedException"
                 self.log(self.logging.ERROR, "While liking hashtags: " + str(e))
+        except KeyboardInterrupt as e:
+            self.status = "KeyboardInterrupt"
+            raise e
 
+        except Exception as e:
+            self.log(self.logging.ERROR, str(e))
+            raise e
+        
         #Update database
         finally:
             if self.db is not None:
                 now = datetime.datetime.now()
-                self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), now, self.get_posts_seen()))
                 try:
+                    self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), now, self.get_posts_seen()))
                     self.db.create_instagram_likejob((self.get_platform(), self.get_username(), now, self.hashtag_stories_seen, self.home_stories_seen))
                 except Exception as e:
-                    self.log(self.logging.ERROR, "Error inserting row in likeJobInstagram table! " + str(e))
+                    self.log(self.logging.ERROR, "Error inserting row in a likejob table! " + str(e))
     
     
     def run(self, params):
 
-        self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
+        try:
+            self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
 
-        super().print_bot_starting()
+            super().print_bot_starting()
 
-        if(self.max_likes>0):
-            
-            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+            if(self.max_likes>0):
+                self.init_driver()
 
-            self.login()
+                self.login()
 
-            self.like_hashtags(params[0])
+                self.like_hashtags(params[0])
 
-            if self.db is not None:
-                self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), self.get_followers_list() ) ) )
-        
-        self.quit()
+                if self.db is not None:
+                    self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), self.get_followers_list() ) ) )
+
+        finally:
+            self.quit()
+
 
     def get_report_string(self):
         return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] posts, watched " + str(self.hashtag_stories_seen) + " stories in hashtags, and " + str(self.home_stories_seen) + " in home.")

@@ -1,10 +1,20 @@
-#External Dependencies
+"""
+Dependencies:
+
+have google chrome in default apps folder
+download a chromedriver compatible with your chrome version (it's probably the latest) and put it in PATH
+pip install selenium
+
+Version i'm using: 81
+
+"""
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import WebDriverException
 
+from pathlib import Path
 import logging
 import logging.handlers
 import os
@@ -22,11 +32,14 @@ import config
 class Bot:
 
     FINISHED_LEVEL = 42
+    #TODO: Make it so that the log is not inside of a directory because the program can't create directories
     LOG_FILENAME = 'logs/bots.log'
 
     def __init__(self, username, password, database_path=None):
         self.username = username
         self.password = password
+
+        self._init_logger()
 
         self.db = None
         if database_path is not None:
@@ -42,11 +55,11 @@ class Bot:
         self.time_started = datetime.datetime.now()
         self.time_ended = 0
 
-        self.status = "Unknown Failure"
+        self.status = "Unknown Error"
 
         self.is_logged_in = False
 
-        self._init_logger()
+
 
     def _config_chromedriver(self):
         self.chrome_options = webdriver.ChromeOptions()
@@ -60,7 +73,9 @@ class Bot:
         self.chrome_options.add_argument("--disable-notifications")
         self.chrome_options.add_argument("--enable-automation")
 
-        self.chrome_options.add_argument("--user-data-dir=/Users/romes/everything-else/botdev/organized/likebots/profiles/"+self.platform+"/"+self.username)
+        user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
+        self.chrome_options.add_argument("--user-data-dir=" + user_data_dir)
+        self.log(logging.INFO, "Chrome --user-data-dir set to " + user_data_dir)
 
 
     def _init_logger(self):
@@ -80,6 +95,12 @@ class Bot:
         handler.setFormatter(logging.Formatter(format, datefmt='%Y-%m-%d %H:%M:%S'))
         self.logger.addHandler(handler)
 
+    def init_driver(self):
+        try:
+            self.driver = webdriver.Chrome(executable_path="chromedriver", options=self.chrome_options)
+        except Exception as e:
+            self.log(self.logging.ERROR, "While setting up driver: " + str(e))
+            raise e
 
     # Level is of type int, call using logging.LEVEL (ex: logging.WARNING)
     # Msg is the string to log

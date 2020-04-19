@@ -98,25 +98,35 @@ class TwitterBot(Bot):
                 time.sleep(random.randrange(4, 8))
 
             self.status = "Success"
+        except KeyboardInterrupt as e:
+            self.status = "KeyboardInterrupt"
+            raise e
+
         except Exception as e:
             self.log(self.logging.ERROR, str(e))
 
-        self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
+        finally:
+            if self.db != None:
+                self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
 
     def run(self, params):
 
-        self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
+        try:
+            self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
 
-        super().print_bot_starting()
+            super().print_bot_starting()
 
-        if(self.max_likes>0):
+            if(self.max_likes>0):
+                self.init_driver()
 
-            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
+                self.login()
+                self.like_hashtags(params[0])
 
-            self.login()
-            self.like_hashtags(params[0])
+        except Exception as e:
+            self.log(self.logging.ERROR, str(e))
+        finally:
+            self.quit()
 
-        self.quit()
     
     def get_report_string(self):
         return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] tweets.")

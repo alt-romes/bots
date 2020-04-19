@@ -80,24 +80,31 @@ class SubmitHubBot(Bot):
                 self.like_music()
     
             self.status = "Success"
+        except KeyboardInterrupt:
+            self.status = "KeyboardInterrupt"
+            raise e
+
         except Exception as e:
             self.log(self.logging.ERROR, str(e))
 
-        self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
+        finally:
+            self.db.create_likejob((self.get_username(), self.get_platform(), self.get_likes_given(), self.get_max_likes(), self.get_status(), self.get_time_started(), datetime.datetime.now(), self.get_posts_seen()))
         
     def run(self, params):
-        self.max_likes = params[0]
+        try:
+            self.max_likes = params[0]
 
-        super().print_bot_starting()
+            super().print_bot_starting()
 
-        if(self.max_likes>0):
-
-            self.driver = webdriver.Chrome(executable_path="/Users/romes/everything-else/botdev/organized/likebots/chromedriver", options=self.chrome_options)
-            
-            self.login()
-            self.hot_or_not()
-
-        self.quit()
+            if(self.max_likes>0):
+                self.init_driver() 
+                
+                self.login()
+                self.hot_or_not()
+        except Exception as e:
+            self.log(self.logging.ERROR, str(e))
+        finally:
+            self.quit()
 
     def get_report_string(self):
         return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] musics.")

@@ -104,7 +104,7 @@ def run_bots(bots):
     for i in range(len(bots)):
         running_bots.append(None)
         #separate in threads
-        x = threading.Thread(target=bot_thread, args=(bots, i, pvals, running_bots, finished_bots), daemon=True)
+        x = threading.Thread(target=bot_thread, args=(bots, i, pvals, running_bots, finished_bots))
         threads.append(x)
         x.start()
 
@@ -142,7 +142,7 @@ def main():
     # format = "%(asctime)s: %(message)s"
     # logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
-    db = "/Users/romes/everything-else/botdev/organized/likebots/dbbots.db"
+    db = "dbbots.db"
 
     bots = create_bots(db)
 
@@ -160,3 +160,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
