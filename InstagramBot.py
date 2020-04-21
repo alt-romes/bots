@@ -58,7 +58,9 @@ class InstagramBot(Bot):
 
         try:
             self.driver.find_element_by_name("username").send_keys(self.username)
-            self.driver.find_element_by_name("password").send_keys(self.password, Keys.ENTER)
+            self.driver.find_element_by_name("password").send_keys(self.password)
+            time.sleep(1)
+            self.driver.find_element_by_css_selector('button[type="submit"]').click()
             time.sleep(2)
         except NoSuchElementException:
             self.log(logging.INFO, "Already logged in.")
@@ -99,7 +101,6 @@ class InstagramBot(Bot):
         Mode: followers to get followers
         Mode: following to get following
         """
-        self.log(logging.INFO, "Getting {} list for {}. . .".format(mode, username))
         if not self.is_logged_in:
             e = NotLoggedIn()
             self.log(logging.ERROR, str(e))
@@ -111,6 +112,8 @@ class InstagramBot(Bot):
         if username == '':
             self.log(logging.ERROR, "You must provide a username, or be logged in!")
             return []
+
+        self.log(logging.INFO, "Getting {} list for {}. . .".format(mode, username))
 
         self.driver.get('https://www.instagram.com/{}/'.format(username))
         time.sleep(2)
@@ -265,47 +268,55 @@ class InstagramBot(Bot):
             self.log(logging.WARNING, "Changing URL directly. . .")
             self.driver.get(self.base_url + 'explore/tags/' + hashtag)
 
+    
+    def like_selected_post(self, hashtag):
+        """
+        Pre: The post must be already selected
+        Params: The hashtag it's on.
+        Likes a post that's selected from the explore page, and adds it to the database if possible.
+        """
 
-    def like_posts(self, hashtag, maxLikesPerHashtag):
-        current_posts_seen = 0
+        #Time to like post
+        time.sleep(random.uniform(2, 3))
+
+        #Like post
+        self.driver.find_element_by_class_name("wpO6b").click()
+
+        if self.db is not None:
+            #Prepare data for database
+            time_liked = datetime.datetime.now()
+            op = self.driver.find_element_by_class_name("e1e1d").text
+            tags = self.driver.find_element_by_class_name("C4VMK").text
+            hashtags = list({tag.strip("#") for tag in tags.split() if tag.startswith("#")})
+            liked_post_entry = (self.get_username(), self.get_platform(), op, time_liked, hashtag) #op, time, hashtag liked in
+
+            #Add liked post to database 
+            post_id = self.db.create_liked_post(liked_post_entry)
+
+            #Add hashtags of liked post to database
+            self.db.add_post_hashtags(list ( map ( (lambda hashtag: (post_id, hashtag)), hashtags) ) )
+            
+
+        self.likes_given+=1
+        self.log(logging.INFO, "Liked a post ({}).".format(self.likes_given))
+
+        #TODO: Randomly call function to check this profile, and if meets conditions, is followed and added to the DB.
+
+
+    def like_posts(self, hashtag, maxLikesPerHour):
 
         #Select first picture
         self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/article/div[1]/div/div/div[1]/div[1]/a').click()
         time.sleep(3)
 
         #For each the post
-        while (current_posts_seen < maxLikesPerHashtag and self.likes_given < self.max_likes):
+        while self.current_posts_liked < maxLikesPerHour:
             self.posts_seen+=1
-            current_posts_seen+=1
             isLiked = len(self.driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]'))>0
 
             if(self.should_like_post() and not isLiked):
-                
-                #Time to like post
-                time.sleep(random.uniform(2, 3))
-
-                #Like post
-                self.driver.find_element_by_class_name("wpO6b").click()
-
-                if self.db is not None:
-                    #Prepare data for database
-                    time_liked = datetime.datetime.now()
-                    op = self.driver.find_element_by_class_name("e1e1d").text
-                    tags = self.driver.find_element_by_class_name("C4VMK").text
-                    hashtags = list({tag.strip("#") for tag in tags.split() if tag.startswith("#")})
-                    liked_post_entry = (self.get_username(), self.get_platform(), op, time_liked, hashtag) #op, time, hashtag liked in
-
-                    #Add liked post to database 
-                    post_id = self.db.create_liked_post(liked_post_entry)
-
-                    #Add hashtags of liked post to database
-                    self.db.add_post_hashtags(list ( map ( (lambda hashtag: (post_id, hashtag)), hashtags) ) )
-                    
-
-                self.likes_given+=1
-                self.log(logging.INFO, "Liked a post ({}).".format(self.likes_given))
-
-                #TODO: Randomly call function to check this profile, and if meets conditions, is followed and added to the DB.
+                self.current_posts_liked+=1
+                self.like_selected_post(hashtag)
             
             #Time to move on
             time.sleep(random.uniform(1, 3))
@@ -313,6 +324,7 @@ class InstagramBot(Bot):
             #Move on
             self.driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
             time.sleep(2)
+
 
         #Close dialog
         self.driver.find_element_by_css_selector('svg[aria-label="Close"]').click()
@@ -329,11 +341,18 @@ class InstagramBot(Bot):
         #Prepare number of likes to give, and order of hashtags
         mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
+
+
+        max_likes_per_hour = 10 #TODO: Make this very dynamic, as in it's calculated through the database
         random.shuffle(hashtags)
 
         try:
             while(self.likes_given<self.max_likes): #TODO: Change to "While determined number of hours isn't over, continue liking every hour"
+
                 for hashtag in hashtags:
+
+                    self.current_posts_liked = 0
+                    one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1)
 
                     #Already randomized
                     self.be_human()
@@ -347,14 +366,19 @@ class InstagramBot(Bot):
 
                     try:
                         if random.random() < 0.8:
-                            self.like_posts(hashtag, max_likes_per_hashtag)
+                            self.like_posts(hashtag, max_likes_per_hour)
                             time.sleep(2)
 
                     except NoSuchElementException as e:
                         self.log(logging.WARNING, "Forced hashtag switch: " + str(e))
 
-                    if(self.likes_given>=self.max_likes):
+                    if self.likes_given>=self.max_likes:
                         break
+                    
+                    if self.current_posts_liked >= max_likes_per_hour and datetime.datetime.now() < one_hour_later:
+                        sleepTime = int((one_hour_later - datetime.datetime.now() + datetime.timedelta(minutes=(random.randrange(1,6)))).total_seconds())
+                        self.log(logging.INFO, "Sleeping for {} minutes until resuming. {} posts liked this hour.".format((sleepTime/60), self.current_posts_liked))
+                        time.sleep(sleepTime)
 
                 time.sleep(random.randrange(4, 8))
             self.status = "Success"
@@ -384,8 +408,8 @@ class InstagramBot(Bot):
                     self.db.create_instagram_likejob((self.get_platform(), self.get_username(), now, self.hashtag_stories_seen, self.home_stories_seen))
                 except Exception as e:
                     self.log(logging.ERROR, "Error inserting row in a likejob table! " + str(e))
-    
-    
+
+
     def run(self, params):
 
         try:

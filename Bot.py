@@ -78,8 +78,8 @@ class Bot:
         # self.chrome_options.add_argument("--enable-automation")
 
         user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
-        self.chrome_options.add_argument("--user-data-dir=" + user_data_dir)
-        self.log(logging.NOTSET, "Chrome --user-data-dir set to " + user_data_dir)
+        # self.chrome_options.add_argument("--user-data-dir=" + user_data_dir) #TODO: Should I Keep The Data Dir ??
+        self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
 
 
     def _init_logger(self):
