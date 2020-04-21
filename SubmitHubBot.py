@@ -9,6 +9,7 @@ import os
 import time
 import datetime
 import random
+import logging
 
 class SubmitHubBot(Bot):
 

@@ -12,6 +12,7 @@ import os
 import time
 import datetime
 import random
+import logging
 
 from Bot import Bot
 

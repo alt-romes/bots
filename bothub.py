@@ -10,6 +10,7 @@ import sys
 from SubmitHubBot import SubmitHubBot
 from InstagramBot import InstagramBot
 from TwitterBot import TwitterBot
+from Bot import Bot
 
 #Database module
 from Database import Database
@@ -19,6 +20,8 @@ from config import credentials
 
 #Params
 from config import params
+
+logBot = Bot(logBot=True)
 
 #Run with param --curses to use curses interface
 def interface(stdscr, running_bots, finished_bots, threads): #stdscr, 
@@ -77,7 +80,7 @@ def interface(stdscr, running_bots, finished_bots, threads): #stdscr,
 
 
 def bot_thread(bots, i, pvals, running_bots, finished_bots):
-    logging.info("Thread %s: starting", i)
+    logBot.log(logging.INFO, "Thread {}: starting".format(i))
     for j in range(len(bots[i])):
         running_bots[i] = bots[i][j]
 
@@ -87,12 +90,11 @@ def bot_thread(bots, i, pvals, running_bots, finished_bots):
         try:
             bots[i][j].run(pvals[i][j%(len(pvals[i]))])
         except Exception as e:
-            logging.info("Something that should not have happened inside bot.run() happened.")
-            print(e)
+            logBot.log(logging.CRITICAL, "Bot crashed! {}".format(str(e)))
         finished_bots.append(bots[i][j])
         running_bots[i] = None
         #set bigger waiting time in between bots ? like an hour
-    logging.info("Thread %s: finishing", i)
+    logBot.log(logging.INFO, "Thread {}: finishing".format(i))
 
 
 def run_bots(bots): 
@@ -138,10 +140,7 @@ def create_bots(db):
     return bots
 
 
-
 def main():
-    # format = "%(asctime)s: %(message)s"
-    # logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
     db = "dbbots.db"
 
@@ -151,11 +150,9 @@ def main():
     # InstagramAPI shall be called from InstagramBot. this file only interacts with InstagramBot.
     # igAPI = InstagramAPI('Romes', 'EAAEjpIcjnsEBAPwg4SW3ZAvElCZBnoWgN85t8VifWPhU1VTiGWlk6kVV5lOKPxPeWxYrIBEpbqDA66FYqgYKOCW6XgrxEWo1MuD1Ld8KkYkvcWZAtsvakx0VCXpcUH4MFMvIqkvpd6MZBFKmq6yZAUHDcDZA9go78ZD')
 
-    logging.info("Main: Starting bot threads.")
+    logBot.log(logging.INFO, "Main: Starting bot threads.")
     run_bots(bots) #, db
-    logging.info("Main: Finished all bot threads.")
-
-    logging.info("Closed database. End program.")
+    logBot.log(logging.INFO, "Program end.")
 
 
 

@@ -35,11 +35,17 @@ class Bot:
     #TODO: Make it so that the log is not inside of a directory because the program can't create directories
     LOG_FILENAME = 'logs/bots.log'
 
-    def __init__(self, username, password, database_path=None):
-        self.username = username
-        self.password = password
+    def __init__(self, username="", password="", database_path=None, logBot=False):
 
         self._init_logger()
+        
+        if logBot:
+            self.username = "Main"
+            self.platform = "Log"
+            return
+
+        self.username = username
+        self.password = password
 
         self.db = None
         if database_path is not None:
@@ -69,9 +75,7 @@ class Bot:
 
         self.chrome_options.add_argument("--window-size=1200x800")
         self.chrome_options.add_argument("--mute-audio")
-        self.chrome_options.add_argument("--disable-extensions")
-        self.chrome_options.add_argument("--disable-notifications")
-        self.chrome_options.add_argument("--enable-automation")
+        # self.chrome_options.add_argument("--enable-automation")
 
         user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
         self.chrome_options.add_argument("--user-data-dir=" + user_data_dir)
@@ -101,31 +105,38 @@ class Bot:
             self.log(logging.ERROR, "While setting up driver: " + str(e))
             raise e
 
-    # Level is of type int, call using logging.LEVEL (ex: logging.WARNING)
-    # Msg is the string to log
-    def log(self, level, msg):
-        extra = {'platform': self.platform, 'username': self.username}
-        self.logger.log(level, msg, extra=extra)
 
-        if msg == '':
-            msg = "No error message :("
+    def log(self, level, message):
+        """
+            Level is of type int, call using logging.LEVEL (ex: logging.WARNING)
+            Msg is the string to log
+        """
+        extra = {'platform': self.platform, 'username': self.username}
+        self.logger.log(level, message, extra=extra)
+
+        if message == '':
+            message = "No error message :("
+
+        msgs = [message[i:i+2000] for i in range(0, len(message), 2000)]
 
         #Send message to discord
-        if level >= logging.ERROR:
-            discord_message = {
-                "content": msg[:2000],
-                "username": self.username + " (" + self.platform + ")"
-            }
-            try:
-                r = requests.post(config.ERROR_WEBHOOK, data=discord_message)
-            except Exception as e:
-                self.log(logging.ERROR, "Failed post to discord: " + str(e))
+        if level > logging.ERROR:
+            for msg in msgs:
+                discord_message = {
+                    "content": msg[:2000],
+                    "username": self.username + " (" + self.platform + ")"
+                }
+                try:
+                    r = requests.post(config.ERROR_WEBHOOK, data=discord_message)
+                except Exception as e:
+                    self.log(logging.ERROR, "Failed post to discord: " + str(e))
 
-            time.sleep(2)
-            try: 
-                r.raise_for_status()
-            except requests.exceptions.HTTPError as e: 
-                self.log(logging.WARNING, "Failed post to discord : " + str(e))
+                time.sleep(2)
+                try: 
+                    r.raise_for_status()
+                except requests.exceptions.HTTPError as e: 
+                    self.log(logging.WARNING, "Failed post to discord : " + str(e))
+                time.sleep(1)
 
 
     def print_bot_starting(self):
@@ -147,10 +158,10 @@ class Bot:
             # Scroll down to the bottom.
             for i in range(1, int(1/modifier)+1):
                 self.driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight*arguments[1]);", element, modifier*i)
-                time.sleep(0.1)
+                time.sleep(0.2)
 
             # Wait to load more followers.
-            time.sleep(1)
+            time.sleep(2)
 
             # Calculate new scroll height and compare with last scroll height.
             new_height = self.driver.execute_script("return arguments[0].scrollHeight", element)

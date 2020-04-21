@@ -1,11 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 
 #Parent class
 from Bot import Bot
-from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials
+from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials, NoDatabase
 
 #Instagram API module
 from InstagramAPI import InstagramAPI
@@ -100,7 +99,7 @@ class InstagramBot(Bot):
         Mode: followers to get followers
         Mode: following to get following
         """
-        self.log(logging.INFO, "Getting followers list for {}. . .".format(username))
+        self.log(logging.INFO, "Getting {} list for {}. . .".format(mode, username))
         if not self.is_logged_in:
             e = NotLoggedIn()
             self.log(logging.ERROR, str(e))
@@ -123,20 +122,21 @@ class InstagramBot(Bot):
         follows_list = [follow.text for follow in follows]
         self.log(logging.INFO, "Looked up {} list from {}.".format(mode, username))
 
-        if self.db is not None and username==self.username and mode=="follower":
+        if self.db is not None and username==self.username and mode=="followers":
             self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), follows_list ) ) )
 
         return follows_list
 
 
     def get_not_following_back(self, username=None):
-        self.log(logging.INFO, "Getting users not following back for {}. . .".format(username))
         if username is None:
             username = self.username
 
         if username == '':
             self.log(logging.ERROR, "You must provide a username or login!")
             return
+
+        self.log(logging.INFO, "Getting users not following back for {}. . .".format(username))
 
         followers_list = self.get_follows_list(username, mode="followers")
         users = [user for user in self.get_follows_list(username, mode="following") if user not in followers_list] 
@@ -175,17 +175,19 @@ class InstagramBot(Bot):
                 canvas = self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/section/div[3]/div[2]/div[2]/div/div/div/div[1]/button[@class="jZyv1  H-yu6"]/div[1]/canvas') #('button.jZyv1.H-yu6>div>canvas.CfWVH[height="44"]')
                 if int(canvas.get_attribute("height")) % 11 == 0:
                     self.driver.find_element_by_css_selector('button.jZyv1.H-yu6>div>span>img._6q-tv').click()
+                else:
+                    raise NoSuchElementException()
             else:
                 self.driver.find_element_by_css_selector('div.T7reQ._0FuTv.pkWJh>div>div>img').click()
             time.sleep(2)
             self.log(logging.INFO, "Watching new stories in --" + mode + ".")
             while True:
                 try:
+                    self.driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
                     if mode=="--home":
                         self.home_stories_seen+=1
                     else:
                         self.hashtag_stories_seen+=1
-                    self.driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
                     self.log(logging.INFO, "Watched a story.")
                     time.sleep(random.uniform(0.5, 2))
                 except Exception as e:
@@ -220,6 +222,12 @@ class InstagramBot(Bot):
         pass
 
 
+    def take_a_break(self):
+        waitTime = random.randrange(120, 300)
+        self.log(logging.INFO, "Taking a break ({} minutes).".format(waitTime/60))
+        time.sleep(waitTime)
+
+
     #Assumes you're on a page that has a clickable instagram reference to home page ( like their logo )
     def be_human(self):
 
@@ -230,10 +238,14 @@ class InstagramBot(Bot):
 
         actions = [self.scroll_activity_feed, self.watch_new_stories, self.scroll_feed, self.go_to_profile]
         random.shuffle(actions)
-        
+
         for action in actions:
             if random.random() < 0.8:
                 action()
+
+        if random.random() < 0.05:
+            self.take_a_break()        
+
         self.log(logging.INFO, "Was human!")
 
 
@@ -254,8 +266,6 @@ class InstagramBot(Bot):
             self.driver.get(self.base_url + 'explore/tags/' + hashtag)
 
 
-    # Mode = "--new" to like new posts, Mode = "--best" to like best posts
-    # Must already be 
     def like_posts(self, hashtag, maxLikesPerHashtag):
         current_posts_seen = 0
 
@@ -272,7 +282,7 @@ class InstagramBot(Bot):
             if(self.should_like_post() and not isLiked):
                 
                 #Time to like post
-                time.sleep(random.uniform(1, 3))
+                time.sleep(random.uniform(2, 3))
 
                 #Like post
                 self.driver.find_element_by_class_name("wpO6b").click()
@@ -293,7 +303,7 @@ class InstagramBot(Bot):
                     
 
                 self.likes_given+=1
-                self.log(logging.INFO, "Liked a post.")
+                self.log(logging.INFO, "Liked a post ({}).".format(self.likes_given))
 
                 #TODO: Randomly call function to check this profile, and if meets conditions, is followed and added to the DB.
             
@@ -322,7 +332,7 @@ class InstagramBot(Bot):
         random.shuffle(hashtags)
 
         try:
-            while(self.likes_given<self.max_likes):
+            while(self.likes_given<self.max_likes): #TODO: Change to "While determined number of hours isn't over, continue liking every hour"
                 for hashtag in hashtags:
 
                     #Already randomized
@@ -383,24 +393,43 @@ class InstagramBot(Bot):
 
             super().print_bot_starting()
 
-            if self.username == "rodrigommesquita":
-                self.login()
-                self.log(logging.INFO, "Users not following back: \n"+str(self.get_not_following_back("romesrf")))
+            # if self.username == "romesrf":
+            #     self.login()
+            #     #TODO change back to .INFO
+            #     a = self.get_not_following_back()
+            #     self.log(logging.INFO, "Users not following back {} ({}): \n{}".format(self.username, len(a), a))
                 # self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
-                
 
             if(self.max_likes>0):
-                self.init_driver()
 
                 self.login()
 
                 self.like_hashtags(params[0])
 
-                self.get_followers_list()
+                self.get_follows_list()
 
         finally:
             self.quit()
 
+    def get_new_followers(self):
+        """
+        Returns the number of people that followed you since the job started
+        """
+        #TODO confirm it works
+        #TODO: Perguntar a alguem como poderia fazer sem ter de repetir o argumento
+        return "-%-"
+        return self.db.query("""
+                                with oneAccFollowers as 
+                                (select follower, time_detected from accFollowers
+                                where platform=? and username=?)
+                                select follower from oneAccFollowers
+                                where julianday(time_detected) > julianday( ?, "-3 minutes" )
+                                except
+                                select follower from oneAccFollowers
+                                where julianday(time_detected) < julianday( ?, "-3 minutes" )
+                             """, (self.platform, self.username, self.time_started, self.time_started))
+
+
 
     def get_report_string(self):
-        return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] posts, watched " + str(self.hashtag_stories_seen) + " stories in hashtags, and " + str(self.home_stories_seen) + " in home.")
+        return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] posts, watched " + str(self.hashtag_stories_seen) + " stories in hashtags, and " + str(self.home_stories_seen) + " in home. " + str(len(self.get_new_followers())) + " people followed you")

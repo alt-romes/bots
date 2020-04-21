@@ -7,6 +7,12 @@ class Database:
         self.conn = sqlite3.connect(path, check_same_thread=False)
         self.create_database()
 
+    def query(self, query, params):
+        cur = self.conn.cursor()
+        cur.execute(query, params)
+        self.conn.commit()
+        return cur.fetchall()
+
     def add_instagram_followers(self, accfollowers):
 
         insert = ''' INSERT OR REPLACE INTO accFollowers(platform, username, follower, time_detected)
@@ -149,7 +155,7 @@ class Database:
                                                 follower text NOT NULL,
                                                 time_detected timestamp,
                                                 FOREIGN KEY (username, platform) REFERENCES accounts (username, platform),
-                                                PRIMARY KEY (username, platform, follower)
+                                                PRIMARY KEY (username, platform, follower, time_detected)
                                             ); """
 
             likejobsinstagram_table = """ CREATE TABLE IF NOT EXISTS likeJobsInstagram (
