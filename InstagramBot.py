@@ -69,7 +69,7 @@ class InstagramBot(Bot):
             self.driver.find_element_by_css_selector('button.bIiDR').click()
             time.sleep(2)
         except NoSuchElementException:
-            self.log(logging.INFO, "Has already enabled notifications")
+            self.log(logging.INFO, "Has already enabled notifications - this might be wrong?")
 
         try:
             time.sleep(3)
@@ -226,7 +226,7 @@ class InstagramBot(Bot):
 
 
     def take_a_break(self):
-        waitTime = random.randrange(120, 300)
+        waitTime = random.randrange(2100, 4500)
         self.log(logging.INFO, "Taking a break ({} minutes).".format(waitTime/60))
         time.sleep(waitTime)
 
@@ -276,8 +276,10 @@ class InstagramBot(Bot):
         Likes a post that's selected from the explore page, and adds it to the database if possible.
         """
 
+        #TODO: If is a video or multiple image, scroll through / watch the video.
+
         #Time to like post
-        time.sleep(random.uniform(2, 3))
+        time.sleep(random.uniform(2.5, 6))
 
         #Like post
         self.driver.find_element_by_class_name("wpO6b").click()
@@ -305,12 +307,14 @@ class InstagramBot(Bot):
 
     def like_posts(self, hashtag, maxLikesPerHour):
 
+        random_modifier = random.randrange(-14, 15)
+
         #Select first picture
         self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/article/div[1]/div/div/div[1]/div[1]/a').click()
         time.sleep(3)
 
         #For each the post
-        while self.current_posts_liked < maxLikesPerHour:
+        while self.current_posts_liked < (maxLikesPerHour + random_modifier) and self.likes_given < self.max_likes:
             self.posts_seen+=1
             isLiked = len(self.driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]'))>0
 
@@ -319,7 +323,7 @@ class InstagramBot(Bot):
                 self.like_selected_post(hashtag)
             
             #Time to move on
-            time.sleep(random.uniform(1, 3))
+            time.sleep(random.uniform(2, 6))
 
             #Move on
             self.driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
@@ -343,16 +347,21 @@ class InstagramBot(Bot):
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
 
 
-        max_likes_per_hour = 10 #TODO: Make this very dynamic, as in it's calculated through the database
+        max_likes_per_hour = 100 #TODO: Make this very dynamic, as in it's calculated through the database
         random.shuffle(hashtags)
 
+        self.current_posts_liked = 0
+        one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1)
+        
+
         try:
-            while(self.likes_given<self.max_likes): #TODO: Change to "While determined number of hours isn't over, continue liking every hour"
+            while(self.likes_given<self.max_likes):
 
                 for hashtag in hashtags:
 
-                    self.current_posts_liked = 0
-                    one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1)
+                    if self.current_posts_liked >= max_likes_per_hour:
+                        self.current_posts_liked = 0
+                        one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1)
 
                     #Already randomized
                     self.be_human()
@@ -368,7 +377,6 @@ class InstagramBot(Bot):
                         if random.random() < 0.8:
                             self.like_posts(hashtag, max_likes_per_hour)
                             time.sleep(2)
-
                     except NoSuchElementException as e:
                         self.log(logging.WARNING, "Forced hashtag switch: " + str(e))
 
@@ -441,19 +449,43 @@ class InstagramBot(Bot):
         """
         #TODO confirm it works
         #TODO: Perguntar a alguem como poderia fazer sem ter de repetir o argumento
-        return "-%-"
         return self.db.query("""
                                 with oneAccFollowers as 
                                 (select follower, time_detected from accFollowers
                                 where platform=? and username=?)
                                 select follower from oneAccFollowers
-                                where julianday(time_detected) > julianday( ?, "-3 minutes" )
                                 except
                                 select follower from oneAccFollowers
-                                where julianday(time_detected) < julianday( ?, "-3 minutes" )
-                             """, (self.platform, self.username, self.time_started, self.time_started))
+                                where julianday(time_detected) < julianday( ?, "-5 minutes" )
+                             """, (self.platform, self.username, self.time_started))
 
+
+    def get_best_hashtags(self):
+        """
+        Returns a list of tuples (x, y) where x = hashtag and y = number of people whose post I liked in that hashtag AND follow me 
+        """
+
+
+        return self.db.query("""
+                                select username, platform, hashtag, count(follower) as followers
+                                from (select accFollowers.username as username, accFollowers.platform as platform, found_in as hashtag, follower
+                                from likedPosts inner join accFollowers
+                                on likedPosts.platform = accFollowers.platform
+                                and likedPosts.username = accFollowers.username
+                                and op = follower
+                                group by follower) 
+                                where username = ? and platform = ?
+                                group by hashtag
+                                order by followers desc
+                            """, (self.username, self.platform))
 
 
     def get_report_string(self):
-        return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] posts, watched " + str(self.hashtag_stories_seen) + " stories in hashtags, and " + str(self.home_stories_seen) + " in home. " + str(len(self.get_new_followers())) + " people followed you")
+
+        return """
+                    Liked [ {} / {} ] posts today.\n
+                    Watched {} stories in hashtags, and {} in home.\n
+                    {} people followed you.\n
+                    Your best hashtags are:\n
+                    {}
+                """.format(self.get_likes_given(), self.get_max_likes(), self.hashtag_stories_seen, self.home_stories_seen, len(self.get_new_followers()), self.get_best_hashtags())

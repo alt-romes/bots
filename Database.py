@@ -8,6 +8,11 @@ class Database:
         self.create_database()
 
     def query(self, query, params):
+        """
+        Receives a query and it's params as arguments.
+        Returns the list of rows from the table gotten by the query
+        """
+
         cur = self.conn.cursor()
         cur.execute(query, params)
         self.conn.commit()
