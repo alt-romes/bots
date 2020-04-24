@@ -53,7 +53,7 @@ class Bot:
             self.db.create_account((self.get_username(), self.get_platform()))
 
         self.driver = None
-        self._config_chromedriver()
+        # self._config_chromedriver()
 
         self.likes_given = 0
         self.max_likes = 0
@@ -68,14 +68,12 @@ class Bot:
 
 
     def _config_chromedriver(self):
-        self.chrome_options = webdriver.ChromeOptions()
+        # self.chrome_options = webdriver.ChromeOptions()
 
-        if not ("--debug" in sys.argv):
-            self.chrome_options.add_argument("--headless")
-
-        self.chrome_options.add_argument("--window-size=1200x800")
-        self.chrome_options.add_argument("--mute-audio")
+        # self.chrome_options.add_argument("--window-size=1200x800")
+        # self.chrome_options.add_argument("--mute-audio")
         # self.chrome_options.add_argument("--enable-automation")
+        pass
 
 
     def _init_logger(self):
@@ -98,14 +96,23 @@ class Bot:
         self.logger.addHandler(handler)
 
     def init_driver(self, managefunction=""):
+        self.chrome_options = webdriver.ChromeOptions()
+
+        #TODO: Use Chromium?
+
         if managefunction == "":
-            user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
+            user_data_dir = "{}/profiles/{}/{}".format(Path().absolute(), self.platform, self.username)
         else:
-            user_data_dir = str(Path().absolute()) + "/profiles/managers/{}/{}/{}".format(self.platform, self.username, managefunction)
-        self.chrome_options.add_argument("--user-data-dir=" + user_data_dir) #TODO: Should I Keep The Data Dir ??
+            user_data_dir = "{}/profiles/managers/{}/{}/{}".format(Path().absolute(), self.platform, self.username, managefunction)
+
+        self.chrome_options.add_argument("--user-data-dir={}".format(user_data_dir)) #TODO: Should I Keep The Data Dir ??
         self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
+
+        if not ("--debug" in sys.argv):
+            self.chrome_options.add_argument("--headless")
+
         try:
-            return webdriver.Chrome(executable_path="chromedriver", options=self.chrome_options)
+            return webdriver.Chrome(options=self.chrome_options)
         except Exception as e:
             self.log(logging.ERROR, "While setting up driver: " + str(e))
             raise e
