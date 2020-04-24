@@ -78,7 +78,7 @@ class Bot:
         # self.chrome_options.add_argument("--enable-automation")
 
         user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
-        # self.chrome_options.add_argument("--user-data-dir=" + user_data_dir) #TODO: Should I Keep The Data Dir ??
+        self.chrome_options.add_argument("--user-data-dir=" + user_data_dir) #TODO: Should I Keep The Data Dir ??
         self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
 
 
@@ -88,7 +88,10 @@ class Bot:
         logging.basicConfig(format=format, datefmt='%Y-%m-%d %H:%M:%S')
 
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+        if "--debug" in sys.argv:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
 
         # Remove all extra handlers. Needs to be redone if I ever need more than one handler - or want to clean this up in a way that handlers don't overlap ?
         if self.logger.handlers:

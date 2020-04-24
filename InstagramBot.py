@@ -17,6 +17,9 @@ import logging
 
 class InstagramBot(Bot):
 
+    MAX_RUN_HOURS = 12
+    MAXLPH = 60
+
     def __init__ (self, username='', password='', database=None, page_name=None, token=None, watch_feed_stories=True):
         """
         Creates an Instagram bot. Can be used to get information from an account, or to run jobs. 
@@ -38,6 +41,8 @@ class InstagramBot(Bot):
             self.ig_api = InstagramAPI(self.page_name, self.token, logf=self.log) #Use parent's logger
 
         super().__init__(username, password, database)
+
+        self.max_likes_per_hour = self.MAXLPH #TODO: Make this very dynamic, as in it's calculated through the database. (Could start by saving the max likes per hour of a like job in the DB)
 
 
     def login(self):
@@ -66,10 +71,11 @@ class InstagramBot(Bot):
             self.log(logging.INFO, "Already logged in.")
 
         try:
+            time.sleep(3)
             self.driver.find_element_by_css_selector('button.bIiDR').click()
-            time.sleep(2)
+            time.sleep(3)
         except NoSuchElementException:
-            self.log(logging.INFO, "Has already enabled notifications - this might be wrong?")
+            self.log(logging.INFO, "Has already enabled notifications.")
 
         try:
             time.sleep(3)
@@ -116,11 +122,11 @@ class InstagramBot(Bot):
         self.log(logging.INFO, "Getting {} list for {}. . .".format(mode, username))
 
         self.driver.get('https://www.instagram.com/{}/'.format(username))
-        time.sleep(2)
+        time.sleep(5)
         self.driver.find_element_by_css_selector('a[href="/{}/{}/"]'.format(username, mode)).click()
-        time.sleep(1)
+        time.sleep(3)
         self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
-        time.sleep(1)
+        time.sleep(3)
         follows = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
         follows_list = [follow.text for follow in follows]
         self.log(logging.INFO, "Looked up {} list from {}.".format(mode, username))
@@ -236,7 +242,12 @@ class InstagramBot(Bot):
 
         self.log(logging.INFO, "Being human!")
         if self.driver.current_url != self.base_url:
-            self.driver.find_element_by_css_selector('a[href="/"]').click()
+            try:
+                self.driver.find_element_by_css_selector('a[href="/"]').click()
+            except Exception as e:
+                self.log(logging.ERROR, "Error searching for hashtag: " + str(e))
+                self.log(logging.WARNING, "Changing URL directly. . .")
+                self.driver.get(self.base_url)
             time.sleep(1.5)
 
         actions = [self.scroll_activity_feed, self.watch_new_stories, self.scroll_feed, self.go_to_profile]
@@ -268,6 +279,10 @@ class InstagramBot(Bot):
             self.log(logging.WARNING, "Changing URL directly. . .")
             self.driver.get(self.base_url + 'explore/tags/' + hashtag)
 
+
+    def should_continue(self):
+        return datetime.datetime.now() < datetime.timedelta(hours=self.MAX_RUN_HOURS) + self.time_started
+    
     
     def like_selected_post(self, hashtag):
         """
@@ -314,7 +329,7 @@ class InstagramBot(Bot):
         time.sleep(3)
 
         #For each the post
-        while self.current_posts_liked < (maxLikesPerHour + random_modifier) and self.likes_given < self.max_likes:
+        while self.current_posts_liked < (maxLikesPerHour + random_modifier) and self.should_continue(): #and self.likes_given < self.max_likes:
             self.posts_seen+=1
             isLiked = len(self.driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]'))>0
 
@@ -346,8 +361,6 @@ class InstagramBot(Bot):
         mlphAux = int(((self.max_likes/len(hashtags))+1)*(random.randrange(2, 5)))
         max_likes_per_hashtag = random.randrange(int(mlphAux*0.9), mlphAux+1)
 
-
-        max_likes_per_hour = 100 #TODO: Make this very dynamic, as in it's calculated through the database
         random.shuffle(hashtags)
 
         self.current_posts_liked = 0
@@ -355,11 +368,11 @@ class InstagramBot(Bot):
         
 
         try:
-            while(self.likes_given<self.max_likes):
+            while self.should_continue() and self.likes_given<self.max_likes:
 
                 for hashtag in hashtags:
 
-                    if self.current_posts_liked >= max_likes_per_hour:
+                    if self.current_posts_liked >= self.max_likes_per_hour:
                         self.current_posts_liked = 0
                         one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1)
 
@@ -375,21 +388,25 @@ class InstagramBot(Bot):
 
                     try:
                         if random.random() < 0.8:
-                            self.like_posts(hashtag, max_likes_per_hour)
+                            self.like_posts(hashtag, self.max_likes_per_hour)
                             time.sleep(2)
                     except NoSuchElementException as e:
                         self.log(logging.WARNING, "Forced hashtag switch: " + str(e))
 
-                    if self.likes_given>=self.max_likes:
+                    if not self.should_continue() or self.likes_given>=self.max_likes:
                         break
                     
-                    if self.current_posts_liked >= max_likes_per_hour and datetime.datetime.now() < one_hour_later:
+                    if self.current_posts_liked >= self.max_likes_per_hour and datetime.datetime.now() < one_hour_later:
                         sleepTime = int((one_hour_later - datetime.datetime.now() + datetime.timedelta(minutes=(random.randrange(1,6)))).total_seconds())
                         self.log(logging.INFO, "Sleeping for {} minutes until resuming. {} posts liked this hour.".format((sleepTime/60), self.current_posts_liked))
                         time.sleep(sleepTime)
 
                 time.sleep(random.randrange(4, 8))
-            self.status = "Success"
+            if not self.should_continue():
+                self.log(logging.WARNING, "Bot exceeded max runtime hours ({})!".format(self.MAX_RUN_HOURS))
+                self.status = "Time Limit Exceeded"
+            else:
+                self.status = "Success"
             self.log(logging.INFO, "Finished the like job.")
         #Handle errors
         except ElementClickInterceptedException as e:
@@ -419,6 +436,10 @@ class InstagramBot(Bot):
 
 
     def run(self, params):
+        """
+        params[0] is a list of hashtags
+        params[1] is the max number of likes the bot can perform
+        """
 
         try:
             self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
@@ -427,7 +448,6 @@ class InstagramBot(Bot):
 
             # if self.username == "romesrf":
             #     self.login()
-            #     #TODO change back to .INFO
             #     a = self.get_not_following_back()
             #     self.log(logging.INFO, "Users not following back {} ({}): \n{}".format(self.username, len(a), a))
                 # self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
@@ -447,8 +467,7 @@ class InstagramBot(Bot):
         """
         Returns the number of people that followed you since the job started
         """
-        #TODO confirm it works
-        #TODO: Perguntar a alguem como poderia fazer sem ter de repetir o argumento
+
         return self.db.query("""
                                 with oneAccFollowers as 
                                 (select follower, time_detected from accFollowers
@@ -456,7 +475,7 @@ class InstagramBot(Bot):
                                 select follower from oneAccFollowers
                                 except
                                 select follower from oneAccFollowers
-                                where julianday(time_detected) < julianday( ?, "-5 minutes" )
+                                where julianday(time_detected) < julianday(?)
                              """, (self.platform, self.username, self.time_started))
 
 
@@ -464,10 +483,8 @@ class InstagramBot(Bot):
         """
         Returns a list of tuples (x, y) where x = hashtag and y = number of people whose post I liked in that hashtag AND follow me 
         """
-
-
         return self.db.query("""
-                                select username, platform, hashtag, count(follower) as followers
+                                select hashtag, count(follower) as followers
                                 from (select accFollowers.username as username, accFollowers.platform as platform, found_in as hashtag, follower
                                 from likedPosts inner join accFollowers
                                 on likedPosts.platform = accFollowers.platform
@@ -483,9 +500,9 @@ class InstagramBot(Bot):
     def get_report_string(self):
 
         return """
-                    Liked [ {} / {} ] posts today.\n
-                    Watched {} stories in hashtags, and {} in home.\n
-                    {} people followed you.\n
-                    Your best hashtags are:\n
+                    Liked [ {} / {} ] posts today.
+                    Watched {} stories in hashtags, and {} in home.
+                    {} people followed you.
+                    Your best hashtags are:
                     {}
                 """.format(self.get_likes_given(), self.get_max_likes(), self.hashtag_stories_seen, self.home_stories_seen, len(self.get_new_followers()), self.get_best_hashtags())
