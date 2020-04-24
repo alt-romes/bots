@@ -19,10 +19,6 @@ class InstagramManager(InstagramBot):
 
         self.platform = "IGManager"
 
-        super().login()
-
-        self.driver.implicitly_wait(5) #TODO: set to higher number?
-
         self.ops = ops
 
         self.all_posts_for_approval = []
@@ -53,13 +49,19 @@ class InstagramManager(InstagramBot):
             self.quit()
 
 
-    def go_to_inbox(self):
-        if self.driver.current_url != self.base_url + "direct/inbox/":
+    def go_to_inbox(self, driver):
+        if driver.current_url != self.base_url + "direct/inbox/":
             try:
-                self.driver.find_element_by_css_selector('a[href="/direct/inbox/"]').click()
+                driver.find_element_by_css_selector('a[href="/direct/inbox/"]').click()
             except Exception as e:
                 self.log(logging.WARNING, "Failed clicking on inbox, forcing page change.\n{}".format(e))
-                self.driver.get(self.base_url + "direct/inbox/")
+                driver.get(self.base_url + "direct/inbox/")
+            else:
+                #Dismiss notifications dialog
+                try:
+                    driver.find_element_by_css_selector('button.bIiDR').click()
+                except NoSuchElementException:
+                    self.log(logging.NOTSET, "Notifications already turned on.")
 
 
     def get_new_messages(self):
@@ -67,24 +69,22 @@ class InstagramManager(InstagramBot):
         Gets new posts sent to inbox by self.ops
         The ops must be already in the bot's DMs. The bot won't accept message requests.
         """
+        driver = self.init_driver(managefunction="get_new_messages")
+        self.log(logging.NOTSET, "Messages driver {}".format(driver))
+        driver.implicitly_wait(5) #TODO: set to higher number?
+        super().login(driver)
         while True:
             try:
-                self.go_to_inbox()
-
-                #Dismiss notifications dialog
-                try:
-                    self.driver.find_element_by_css_selector('button.bIiDR').click()
-                except NoSuchElementException:
-                    self.log(logging.DEBUG, "Notifications already Turned On.")
+                self.go_to_inbox(driver)
 
                 for op in self.ops:
                     try:
                         #Find new message
-                        mthread = self.driver.find_element_by_xpath('//*[contains(text(), "{}")]/../../../../../../div[@class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]'.format(op))
+                        mthread = driver.find_element_by_xpath('//*[contains(text(), "{}")]/../../../../../../div[@class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]'.format(op))
                         self.log(logging.INFO, "Found message from {}.".format(op))
                         mthread.click()
                         #Retrieve new posts
-                        dmp = self.driver.find_elements_by_css_selector('div[class="_6JFwq  e9_tN"]>div>div[class="  _3PsV3  CMoMH    _8_yLp  "]>div.ZyFrc') #Gets lastest posts sent to IGManager
+                        dmp = driver.find_elements_by_css_selector('div[class="_6JFwq  e9_tN"]>div>div[class="  _3PsV3  CMoMH    _8_yLp  "]>div.ZyFrc') #Gets lastest posts sent to IGManager
                         for post in dmp:
                             try:
                                 post_user = post.find_element_by_css_selector('div>span[class="_7UhW9   xLCgt       qyrsm KV-D4         se6yk        "]').text
@@ -106,7 +106,7 @@ class InstagramManager(InstagramBot):
                                     self.getting_permission_queue.put(post_item)
                                 else:
                                     self.log(logging.INFO, "Post already queued.")
-                        self.go_to_inbox()
+                        self.go_to_inbox(driver)
                     except NoSuchElementException:
                         self.log(logging.INFO, "No new messages from {}.".format(op))
 
@@ -125,6 +125,12 @@ class InstagramManager(InstagramBot):
 
 
     def get_posting_permissions(self):
+        time.sleep(10)
+        driver = self.init_driver(managefunction="get_posting_permissions")
+        self.log(logging.NOTSET, "Permissions driver {}".format(driver))
+        driver.implicitly_wait(5) #TODO: set to higher number?
+        super().login(driver)
+        self.go_to_inbox(driver)
         while True:
             try:
                 p = self.getting_permission_queue.get()

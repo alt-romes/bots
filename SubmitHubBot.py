@@ -98,7 +98,7 @@ class SubmitHubBot(Bot):
             super().print_bot_starting()
 
             if(self.max_likes>0):
-                self.init_driver() 
+                self.driver = self.init_driver()
                 
                 self.login()
                 self.hot_or_not()

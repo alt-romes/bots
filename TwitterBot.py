@@ -118,7 +118,7 @@ class TwitterBot(Bot):
             super().print_bot_starting()
 
             if(self.max_likes>0):
-                self.init_driver()
+                self.driver = self.init_driver()
 
                 self.login()
                 self.like_hashtags(params[0])

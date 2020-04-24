@@ -37,3 +37,10 @@ class NoDatabase(BotError):
         self.message = message
     def __str__(self):
         return self.message 
+
+
+class NoDriver(BotError):
+    def __init__(self, message="No driver!"):
+        self.message = message
+    def __str__(self):
+        return self.message 

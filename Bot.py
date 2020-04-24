@@ -56,7 +56,7 @@ class Bot:
         self._config_chromedriver()
 
         self.likes_given = 0
-        self.max_likes = "-"
+        self.max_likes = 0
         self.posts_seen = 0
         self.time_started = datetime.datetime.now()
         self.time_ended = 0
@@ -76,10 +76,6 @@ class Bot:
         self.chrome_options.add_argument("--window-size=1200x800")
         self.chrome_options.add_argument("--mute-audio")
         # self.chrome_options.add_argument("--enable-automation")
-
-        user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
-        self.chrome_options.add_argument("--user-data-dir=" + user_data_dir) #TODO: Should I Keep The Data Dir ??
-        self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
 
 
     def _init_logger(self):
@@ -101,9 +97,15 @@ class Bot:
         handler.setFormatter(logging.Formatter(format, datefmt='%Y-%m-%d %H:%M:%S'))
         self.logger.addHandler(handler)
 
-    def init_driver(self):
+    def init_driver(self, managefunction=""):
+        if managefunction == "":
+            user_data_dir = str(Path().absolute()) + "/profiles/" + self.platform+"/"+self.username
+        else:
+            user_data_dir = str(Path().absolute()) + "/profiles/managers/{}/{}/{}".format(self.platform, self.username, managefunction)
+        self.chrome_options.add_argument("--user-data-dir=" + user_data_dir) #TODO: Should I Keep The Data Dir ??
+        self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
         try:
-            self.driver = webdriver.Chrome(executable_path="chromedriver", options=self.chrome_options)
+            return webdriver.Chrome(executable_path="chromedriver", options=self.chrome_options)
         except Exception as e:
             self.log(logging.ERROR, "While setting up driver: " + str(e))
             raise e

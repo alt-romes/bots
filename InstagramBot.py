@@ -4,7 +4,7 @@ from selenium.common.exceptions import NoSuchElementException, ElementClickInter
 
 #Parent class
 from Bot import Bot
-from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials, NoDatabase
+from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials, NoDatabase, NoDriver
 
 #Instagram API module
 from InstagramAPI import InstagramAPI
@@ -45,41 +45,45 @@ class InstagramBot(Bot):
         self.max_likes_per_hour = self.MAXLPH #TODO: Make this very dynamic, as in it's calculated through the database. (Could start by saving the max likes per hour of a like job in the DB)
 
 
-    def login(self):
+    def login(self, driver=None):
 
         if self.username=='' or self.password=='':
             e = NoAccountCredentials()
             self.log(logging.ERROR, str(e))
             raise e
 
-        if self.driver is None:
-            self.init_driver()
+        if self.driver==None and driver==None:
+            e = NoDriver()
+            self.log(logging.ERROR, str(e))
+            raise e
+        elif driver==None:
+            driver = self.driver
 
-        self.driver.get(self.base_url)
+        driver.get(self.base_url)
 
         time.sleep(1)
 
         self.log(logging.INFO, "Logging in. . .")
 
         try:
-            self.driver.find_element_by_name("username").send_keys(self.username)
-            self.driver.find_element_by_name("password").send_keys(self.password)
+            driver.find_element_by_name("username").send_keys(self.username)
+            driver.find_element_by_name("password").send_keys(self.password)
             time.sleep(1)
-            self.driver.find_element_by_css_selector('button[type="submit"]').click()
+            driver.find_element_by_css_selector('button[type="submit"]').click()
             time.sleep(2)
         except NoSuchElementException:
             self.log(logging.INFO, "Already logged in.")
 
         try:
             time.sleep(3)
-            self.driver.find_element_by_css_selector('button.bIiDR').click()
+            driver.find_element_by_css_selector('button.bIiDR').click()
             time.sleep(3)
         except NoSuchElementException:
             self.log(logging.INFO, "Has already enabled notifications.")
 
         try:
             time.sleep(3)
-            self.page_name = self.driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
+            self.page_name = driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
             self.log(logging.DEBUG, "User's page name is " + self.page_name)
 
         except Exception as e:
@@ -453,6 +457,9 @@ class InstagramBot(Bot):
                 # self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
 
             if(self.max_likes>0):
+
+                if self.driver is None:
+                    self.driver = self.init_driver()
 
                 self.login()
 
