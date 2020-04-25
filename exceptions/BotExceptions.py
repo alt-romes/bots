@@ -44,3 +44,9 @@ class NoDriver(BotError):
         self.message = message
     def __str__(self):
         return self.message 
+
+class FailedImageDownload(BotError):
+    def __init__(self, message="Failed image download!"):
+        self.message = message
+    def __str__(self):
+        return self.message

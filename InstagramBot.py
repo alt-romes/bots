@@ -93,6 +93,26 @@ class InstagramBot(Bot):
         self.log(logging.INFO, "Logged in.")
         time.sleep(1)
 
+    
+    def login_mobile(self, driver):
+        try:        
+            driver.get(self.base_url)
+            self.log(logging.INFO, "Logging in. . .")
+            driver.find_element_by_xpath('//*[contains(text(), "Log In")]').click()
+            driver.find_element_by_css_selector('input[aria-label="Phone number, username, or email"]').send_keys(self.username)
+            driver.find_element_by_css_selector('input[aria-label="Password"]').send_keys(self.password)
+            driver.find_element_by_xpath('//*[contains(text(), "Log In")]').click() 
+            driver.find_element_by_xpath('//*[contains(text(), "Save Info")]').click() 
+            driver.find_element_by_xpath('//*[contains(text(), "Cancel")]').click()
+            driver.find_element_by_xpath('//*[contains(text(), "Not Now")]').click()
+        except NoSuchElementException:
+            self.log(logging.INFO, "Already logged in.")
+
+        except Exception as e:
+            self.log(logging.ERROR, "Error logging in: {}".format(e))
+            return False
+        else:
+            return True
 
     def get_number_of_posts(self):
         if self.ig_api is not None:

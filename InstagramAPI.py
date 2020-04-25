@@ -22,6 +22,7 @@ class InstagramAPI:
             self.log = logf
 
 
+    #THIS FUNCTION IS NOT BEING RUN
     def login(self, force=False):
         self.log(logging.WARNING, "I'm using a developer token. I should already be logged in.")
         if (not self.isLoggedIn or force):

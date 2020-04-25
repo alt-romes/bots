@@ -14,7 +14,6 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import WebDriverException
 
-from pathlib import Path
 import logging
 import logging.handlers
 import os
@@ -95,15 +94,22 @@ class Bot:
         handler.setFormatter(logging.Formatter(format, datefmt='%Y-%m-%d %H:%M:%S'))
         self.logger.addHandler(handler)
 
-    def init_driver(self, managefunction=""):
+    def init_driver(self, managefunction="", user_agent=""):
         self.chrome_options = webdriver.ChromeOptions()
 
         #TODO: Use Chromium?
 
+        if user_agent == "mobile":
+            self.chrome_options.add_argument("--user-agent={}".format("Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1"))
+
+        #TODE(to decide): Use custom browser agent?
+        # else:
+        #     self.chrome_options.add_argument("--user-agent={}".format("Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1"))
+
         if managefunction == "":
-            user_data_dir = "{}/profiles/{}/{}".format(Path().absolute(), self.platform, self.username)
+            user_data_dir = os.path.abspath("profiles/{}/{}".format(self.platform, self.username))
         else:
-            user_data_dir = "{}/profiles/managers/{}/{}/{}".format(Path().absolute(), self.platform, self.username, managefunction)
+            user_data_dir = os.path.abspath("profiles/managers/{}/{}/{}".format(self.platform, self.username, managefunction))
 
         self.chrome_options.add_argument("--user-data-dir={}".format(user_data_dir)) #TODO: Should I Keep The Data Dir ??
         self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
