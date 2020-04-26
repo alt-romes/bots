@@ -19,12 +19,10 @@ import datetime
 
 class InstagramManager(InstagramBot):
 
-    CHECK_FOR_NEW_MESSAGES_FREQUENCY = 60
-    MAX_PERMISSIONS_PER_HOUR = 6
     DAYS_TO_APPROVE_TIMEOUT = 4
     ACCEPTANCE_MESSAGE = "allow"
 
-    def __init__(self, username, password, ops=[], database=None, permission_message="", page_name="", token=""):
+    def __init__(self, username, password, ops=[], database=None, hashtags=[], permission_message="", timedelta_between_permission_request=300, timedelta_between_posts=3600, page_name="", token=""):
         """
         To allow messages from anyone, include "" in ops
         """
@@ -36,6 +34,9 @@ class InstagramManager(InstagramBot):
         self.platform = "IGManager"
         
         self.permission_message = permission_message
+        self.hashtags = hashtags
+        self.timedelta_between_permission_request = timedelta_between_permission_request
+        self.timedelta_between_posts = timedelta_between_posts
 
         if ops == []:
             ops = [username]
@@ -213,6 +214,8 @@ class InstagramManager(InstagramBot):
                                     #This section of the code works mac only
                                     post.find_element_by_css_selector('div[class="z82Jr"]').click()
                                     post_url = driver.current_url
+                                    d = self.driver.find_element_by_class_name("C4VMK").text
+                                    hashtags = list({word.strip("#") for word in d.split() if word.startswith("#")})
                                     driver.execute_script("window.history.go(-1)")
 
                                     #Exit after retrieving information
@@ -220,7 +223,7 @@ class InstagramManager(InstagramBot):
                                     self.log(logging.NOTSET, "Old message unaccessible...")
                                 else:
                                     #Post_Item Organization
-                                    post_item = (post_user, post_url, op, img_src, datetime.datetime.now())
+                                    post_item = (post_user, post_url, op, img_src, datetime.datetime.now(), hashtags)
 
                                     self.log(logging.DEBUG, "Posts queued for approval: " + str(self.posts_queued_for_approval()))
 
@@ -238,7 +241,7 @@ class InstagramManager(InstagramBot):
                 except Exception as e:
                     self.log(logging.ERROR, "Failed getting new messages: {}".format(e))
                 finally:
-                    time.sleep(10) #TODO: REPLACE BY self.CHECK_FOR_NEW_MESSAGES_FREQUENCY
+                    time.sleep(5)
         except Exception as e:
             self.log(logging.ERROR, "Exiting: {}".format(e))
             driver.quit()
@@ -274,11 +277,17 @@ class InstagramManager(InstagramBot):
         Sends @msg to @user
         """
         self.go_to_inbox(driver)
+        time.sleep(1)
         driver.find_element_by_xpath('//*[@aria-label="New Message"]/..').click()
+        time.sleep(2)
         driver.find_element_by_css_selector('input[placeholder="Search..."]').send_keys("@{}".format(user))
+        time.sleep(2)
         driver.find_elements_by_css_selector('div.-qQT3>div>div[class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "')[0].click()
+        time.sleep(2)
         driver.find_element_by_xpath('//*[contains(text(), "Next")]').click() 
+        time.sleep(2)
         driver.find_element_by_css_selector('textarea[placeholder="Message..."]').send_keys(msg)
+        time.sleep(2)
 
     def get_posting_permissions(self):
         time.sleep(5)
@@ -296,16 +305,22 @@ class InstagramManager(InstagramBot):
                     self.log(logging.INFO, "Getting permissions for post {}".format(p[0]))
                     self.send_message(driver, p[0], self.generate_approach(p))
                     driver.get(p[1])
+                    time.sleep(2)
                     driver.find_element_by_xpath('//*[@aria-label="Share Post"]/..').click()
+                    time.sleep(1)
                     driver.find_element_by_xpath('//*[contains(text(), "Share to Direct")]/../../../../..').click()
+                    time.sleep(1)
                     driver.find_element_by_css_selector('input[placeholder="Search..."]').send_keys("@{}".format(p[0]))
+                    time.sleep(4)
                     driver.find_elements_by_css_selector('div.-qQT3>div>div[class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]')[0].click()
+                    time.sleep(2)
                     driver.find_element_by_xpath('//*[contains(text(), "Send")]').click()
+                    time.sleep(1)
                     self.pending_approval_list.append(p)
                     self.db.sent_permission_request((self.platform, self.username, p[1]))
                 finally:
                     self.go_to_inbox(driver)
-                    # time.sleep(10) #TODO: Replace with (3600 / self.MAX_PERMISSIONS_PER_HOUR)
+                    time.sleep(self.timedelta_between_permission_request)
         except Exception as e:
             self.log(logging.ERROR, "Exiting: {}".format(e))
             driver.quit()
@@ -316,10 +331,8 @@ class InstagramManager(InstagramBot):
         Generates a message sent to users. Must include line breaks so the message gets sent
         """
 
-        m1 = """Hey! One of our curators marked this image, and we want your permission to repost it, with due credits, on our page. This is an automated message. If you have any question, DM the curator who selected your post (@{}). If you allow us to feature you, reply just "ALLOW". Thank you, Rodri and Tony.
+        m = """Hey! One of our curators marked this image, and we want your permission to repost it, with due credits, on our page. This is an automated message. If you have any question, DM the curator who selected your post (@{}). If you allow us to feature you, reply just "ALLOW". Thank you, Rodri and Tony.
                 """
-
-        m = m1
 
         if self.permission_message != "":
             m = self.permission_message
@@ -378,9 +391,14 @@ class InstagramManager(InstagramBot):
         driver.find_element_by_css_selector("button.UP43G").click()
         
 
-    def create_caption(self, user):
+    def create_caption(self, user, extrahashtags=[]):
         #TODO: Add page hashtags to caption
-        return "Original image by @{}. Check out their profile!".format(user)
+        m = "Original image by @{}. Check out their profile!\n--------------------------------\n".format(user)
+        for h in self.hashtags:
+            m += "#{} ".format(h)
+        for h in extrahashtags[:3]:
+            m += "#{} ".format(h)
+        
 
 
     def publish_posts(self):
@@ -400,13 +418,13 @@ class InstagramManager(InstagramBot):
 
                     path = self.download_image(p[3]) #p4 = 1080p img url
 
-                    self.post_photo(driver, path, self.create_caption(p[0]))
+                    self.post_photo(driver, path, self.create_caption(p[0], p[5]))
                     self.db.posted_approved_post((self.platform, self.username, p[1]))
 
                     self.log(self.FINISHED_LEVEL, "Posted successfully image by {}!".format(p[0]))
 
                 finally:
-                    time.sleep(10) #TODO: Replace with amount of time between posts?
+                    time.sleep(self.timedelta_between_posts)
         except Exception as e:
             self.log(logging.ERROR, "Exiting: {}".format(e))
             traceback.print_exc()
@@ -416,5 +434,5 @@ class InstagramManager(InstagramBot):
 if __name__ == "__main__":
     
     igm = InstagramManager(credentials["instagram"][2]['username'], credentials["instagram"][2]['password'], ["rodrigommesquita", "_soopm"], "dbbots.db")
-    # igm = InstagramManager(credentials["instagram"][3]['username'], credentials["instagram"][3]['password'], credentials["instagram"][3]["ops"], "dbbots.db", credentials["instagram"][3]["permission_message"])
+    igm = InstagramManager(credentials["instagram"][3]['username'], credentials["instagram"][3]['password'], credentials["instagram"][3]["ops"], "dbbots.db", permission_message=credentials["instagram"][3]["permission_message"], hashtags=credentials["instagram"][3]["hashtags"], timedelta_between_permission_request=120, timedelta_between_posts=120)
     igm.manage()

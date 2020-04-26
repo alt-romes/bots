@@ -344,8 +344,8 @@ class InstagramBot(Bot):
             #Prepare data for database
             time_liked = datetime.datetime.now()
             op = self.driver.find_element_by_class_name("e1e1d").text
-            tags = self.driver.find_element_by_class_name("C4VMK").text
-            hashtags = list({tag.strip("#") for tag in tags.split() if tag.startswith("#")})
+            d = self.driver.find_element_by_class_name("C4VMK").text
+            hashtags = list({word.strip("#") for word in d.split() if word.startswith("#")})
             liked_post_entry = (self.get_username(), self.get_platform(), op, time_liked, hashtag) #op, time, hashtag liked in
 
             #Add liked post to database 
@@ -549,4 +549,6 @@ class InstagramBot(Bot):
                     {} people followed you.
                     Your best hashtags are:
                     {}
-                """.format(self.get_likes_given(), self.get_max_likes(), self.hashtag_stories_seen, self.home_stories_seen, len(self.get_new_followers()), self.get_best_hashtags())
+                    Not following you back:
+                    {}
+                """.format(self.get_likes_given(), self.get_max_likes(), self.hashtag_stories_seen, self.home_stories_seen, len(self.get_new_followers()), self.get_best_hashtags(), self.get_not_following_back())
