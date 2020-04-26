@@ -52,8 +52,7 @@ class Bot:
             self.db.create_account((self.get_username(), self.get_platform()))
 
         self.driver = None
-        # self._config_chromedriver()
-
+        
         self.likes_given = 0
         self.max_likes = 0
         self.posts_seen = 0
@@ -63,16 +62,6 @@ class Bot:
         self.status = "Unknown Error"
 
         self.is_logged_in = False
-
-
-
-    def _config_chromedriver(self):
-        # self.chrome_options = webdriver.ChromeOptions()
-
-        # self.chrome_options.add_argument("--window-size=1200x800")
-        # self.chrome_options.add_argument("--mute-audio")
-        # self.chrome_options.add_argument("--enable-automation")
-        pass
 
 
     def _init_logger(self):
@@ -96,6 +85,7 @@ class Bot:
 
     def init_driver(self, managefunction="", user_agent=""):
         self.chrome_options = webdriver.ChromeOptions()
+        self.chrome_options.add_argument("--window-size=1200x800")
 
         #TODO: Use Chromium?
 
@@ -114,7 +104,7 @@ class Bot:
         self.chrome_options.add_argument("--user-data-dir={}".format(user_data_dir)) #TODO: Should I Keep The Data Dir ??
         self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
 
-        if not ("--debug" in sys.argv):
+        if "--debug" not in sys.argv or "--headless" in sys.argv :
             self.chrome_options.add_argument("--headless")
 
         try:

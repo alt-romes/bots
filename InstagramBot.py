@@ -14,6 +14,8 @@ import time
 import datetime
 import random
 import logging
+import sys
+import traceback
 
 class InstagramBot(Bot):
 
@@ -81,13 +83,13 @@ class InstagramBot(Bot):
         except NoSuchElementException:
             self.log(logging.INFO, "Has already enabled notifications.")
 
-        try:
-            time.sleep(3)
-            self.page_name = driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
-            self.log(logging.DEBUG, "User's page name is " + self.page_name)
+        # try:
+        #     time.sleep(3)
+        #     self.page_name = driver.find_element_by_css_selector("div.f5Yes.oL_O8").text
+        #     self.log(logging.DEBUG, "User's page name is " + self.page_name)
 
-        except Exception as e:
-            self.log(logging.DEBUG, "Couldn't find user's page name: " + str(e))
+        # except Exception as e:
+        #     self.log(logging.DEBUG, "Couldn't find user's page name: " + str(e))
 
         self.is_logged_in = True
         self.log(logging.INFO, "Logged in.")
@@ -95,23 +97,38 @@ class InstagramBot(Bot):
 
     
     def login_mobile(self, driver):
-        try:        
+        try:
             driver.get(self.base_url)
-            self.log(logging.INFO, "Logging in. . .")
-            driver.find_element_by_xpath('//*[contains(text(), "Log In")]').click()
+            try:
+                driver.find_element_by_xpath('//*[contains(text(), "Log In")]').click()
+            except (ElementClickInterceptedException, NoSuchElementException):
+                self.log(logging.DEBUG, "Wasn't prompted the 'Log In' button")
+            time.sleep(8)
             driver.find_element_by_css_selector('input[aria-label="Phone number, username, or email"]').send_keys(self.username)
+            time.sleep(8)
             driver.find_element_by_css_selector('input[aria-label="Password"]').send_keys(self.password)
-            driver.find_element_by_xpath('//*[contains(text(), "Log In")]').click() 
-            driver.find_element_by_xpath('//*[contains(text(), "Save Info")]').click() 
-            driver.find_element_by_xpath('//*[contains(text(), "Cancel")]').click()
-            driver.find_element_by_xpath('//*[contains(text(), "Not Now")]').click()
+            time.sleep(8)
+            driver.find_element_by_xpath('//*[contains(text(), "Log In")]/../..').click()
+            time.sleep(8)
+            try:
+                driver.find_element_by_xpath('//*[contains(text(), "Save Info")]').click()
+                time.sleep(8)
+                driver.find_element_by_xpath('//*[contains(text(), "Cancel")]').click()
+                time.sleep(8)
+                driver.find_element_by_xpath('//*[contains(text(), "Not Now")]').click()
+                time.sleep(8)
+            except Exception as e:
+                self.log(logging.DEBUG, "Wasn't prompted aditional buttons after Save Info")
         except NoSuchElementException:
             self.log(logging.INFO, "Already logged in.")
 
         except Exception as e:
             self.log(logging.ERROR, "Error logging in: {}".format(e))
+            traceback.print_exc()
             return False
         else:
+            self.is_logged_in = True
+            self.log(logging.INFO, "Logged in mobile!")
             return True
 
     def get_number_of_posts(self):

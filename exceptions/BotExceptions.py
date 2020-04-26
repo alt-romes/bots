@@ -50,3 +50,13 @@ class FailedImageDownload(BotError):
         self.message = message
     def __str__(self):
         return self.message
+
+class NoNewMessagesFromUser(BotError):
+    def __init__(self, user, message="No new messages from {}."):
+        self.message = message.format(user)
+        self.user = user
+    def get_user(self):
+        return self.user
+    def __str__(self):
+        return self.message
+

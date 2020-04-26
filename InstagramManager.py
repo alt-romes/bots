@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 
 from config import credentials
 
-from exceptions.BotExceptions import FailedImageDownload
+from exceptions.BotExceptions import FailedImageDownload, NoNewMessagesFromUser
 from InstagramBot import InstagramBot
 
 
@@ -14,29 +14,46 @@ import time
 import logging
 import threading
 import queue
+import traceback
+import datetime
 
 class InstagramManager(InstagramBot):
 
     CHECK_FOR_NEW_MESSAGES_FREQUENCY = 60
     MAX_PERMISSIONS_PER_HOUR = 6
+    DAYS_TO_APPROVE_TIMEOUT = 4
     ACCEPTANCE_MESSAGE = "allow"
 
-    def __init__(self, username, password, ops, page_name="", token=""):
+    def __init__(self, username, password, ops=[], database=None, permission_message="", page_name="", token=""):
+        """
+        To allow messages from anyone, include "" in ops
+        """
         
-        super().__init__(username, password, page_name, token)
+        super().__init__(username, password, database, page_name, token)
 
         self.log(logging.INFO, "Starting up...")
 
         self.platform = "IGManager"
+        
+        self.permission_message = permission_message
+
+        if ops == []:
+            ops = [username]
 
         self.ops = ops
 
-        self.all_posts_for_approval = []
+
+        #TODO: Retrieve current lists from DB
+
         self.getting_permission_queue = queue.Queue()
 
         self.pending_approval_list = list()
 
         self.posting_queue = queue.Queue()
+
+
+        self.restore_queues_state()
+
 
     def manage(self):
         try:
@@ -62,6 +79,44 @@ class InstagramManager(InstagramBot):
             self.log(logging.ERROR, "Quitting InstagramManager: {}".format(e))
 
 
+    def restore_queues_state(self):
+
+        pu = (self.platform, self.username)
+
+        gp = """
+                select post_op, post_url, operator, img_src from managerPostApproval
+                where platform = ? and username = ? and sent_request=0 order by time desc
+            """
+
+        pending_permission_requests = self.db.query(gp, pu)
+        self.log(logging.DEBUG, "Pending permission requests: "+str(pending_permission_requests))
+
+        pa = """
+                select post_op, post_url, operator, img_src from managerPostApproval
+                where platform = ? and username = ? and sent_request=1 and approved = 0 order by time desc
+            """
+        
+        pending_approvals = self.db.query(pa, pu)
+        self.log(logging.DEBUG, "Pending approval: "+str(pending_approvals))
+
+        pp = """
+                select post_op, post_url, operator, img_src from managerPostApproval
+                where platform = ? and username = ? and approved = 1 and posted = 0 order by time desc
+            """
+
+        pending_publish = self.db.query(pp, pu)
+        self.log(logging.DEBUG, "Pending publish: "+str(pending_publish))
+
+        for p in pending_permission_requests:
+            self.getting_permission_queue.put(p)
+
+        for p in pending_approvals:
+            self.pending_approval_list.append(p)
+
+        for p in pending_publish:
+            self.posting_queue.put(p)
+
+
     def go_to_inbox(self, driver):
         if driver.current_url != self.base_url + "direct/inbox/":
             try:
@@ -75,6 +130,27 @@ class InstagramManager(InstagramBot):
                     driver.find_element_by_css_selector('button.bIiDR').click()
                 except NoSuchElementException:
                     self.log(logging.NOTSET, "Notifications already turned on.")
+
+
+    def switch_to_msg_thread(self, driver, user):
+        """
+        Navigates to the messages thread with @user
+        """
+        #Find new message
+        try:
+            try:
+                driver.find_element_by_css_selector('h5._7UhW9.xLCgt.qyrsm.gtFbE.uL8Hv.T0kll').click()
+                driver.find_element_by_xpath('//*[contains(text(), "")]/../../../../../../../../a[@class="-qQT3 rOtsg"]').click()
+                driver.find_element_by_css_selector('div._7UhW9.xLCgt.qyrsm.KV-D4.uL8Hv').click()
+                time.sleep(2)
+            except NoSuchElementException:
+                self.log(logging.DEBUG, "No new message requests.")
+            driver.find_element_by_xpath('//*[contains(text(), "{}")]/../../../../../../div[@class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]'.format(user)).click()
+        except NoSuchElementException:
+            raise NoNewMessagesFromUser(user)
+        else:
+            self.log(logging.INFO, "Found message from {}.".format(user))
+
 
 
     def get_new_messages(self):
@@ -92,21 +168,48 @@ class InstagramManager(InstagramBot):
                 try:
                     self.go_to_inbox(driver)
 
+                    for p in list(self.pending_approval_list):
+                        try:
+                            
+                            try:
+                                self.switch_to_msg_thread(driver, p[0])
+                            except NoNewMessagesFromUser as e:
+                                self.log(logging.INFO, "{} hasn't answered back.".format(e.get_user()))
+                            else: 
+                                msgs = driver.find_elements_by_css_selector('div[class="                   Igw0E     IwRSH        YBx95       _4EzTm                                                                                   XfCBB            g6RW6               "]')
+                                for msg in msgs:
+                                    if self.permission_is_granted(msg.find_element_by_css_selector('div>span').text):
+                                        self.posting_queue.put(p)
+                                        self.pending_approval_list.remove(p)
+                                        self.db.approve_post_approval((self.platform, self.username, p[1]))
+                                        #Send message back. This means put in queue and send message from the other thread
+                                        self.log(self.FINISHED_LEVEL, "Permission granted by {}".format(p[0]))
+                                        self.reply_message(driver, "Thank you! Your post was scheduled.") #TODO: Set this up in a way that it only asks for permissions within a day's notice, and only until it has enough to post for a day
+                                        break
+                        except NoSuchElementException:
+                            self.log(logging.DEBUG, )
+                        
+                        if datetime.datetime.now() - p[4] > datetime.timedelta(days=self.DAYS_TO_APPROVE_TIMEOUT):
+                            self.pending_approval_list.remove(p)
+                            self.db.invalidate_post_approval((self.platform, self.username, p[1]))
+
                     for op in self.ops:
                         try:
-                            #Find new message
-                            mthread = driver.find_element_by_xpath('//*[contains(text(), "{}")]/../../../../../../div[@class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]'.format(op))
-                            self.log(logging.INFO, "Found message from {}.".format(op))
-                            mthread.click()
+                            self.switch_to_msg_thread(driver, op)
+                        except NoNewMessagesFromUser as e:
+                            self.log(logging.INFO, str(e))
+                        else:
+                            msgsboard = driver.find_element_by_css_selector('div.VUU41')
+                            driver.execute_script('arguments[0].scrollTo(0, arguments[0].scrollHeight)', msgsboard)
                             time.sleep(1)
                             #Retrieve new posts
                             dmp = driver.find_elements_by_css_selector('div[class="_6JFwq  e9_tN"]>div>div[class="  _3PsV3  CMoMH    _8_yLp  "]>div.ZyFrc') #Gets lastest posts sent to IGManager
                             dmp.reverse()
+                            self.log(logging.DEBUG, "Posts to see: {}".format(dmp))
                             for post in dmp:
                                 try:
                                     post_user = post.find_element_by_css_selector('div>span[class="_7UhW9   xLCgt       qyrsm KV-D4         se6yk        "]').text
-                                    post_desc = post.find_element_by_css_selector('div>span[class="_7UhW9   xLCgt      MMzan  KV-D4         se6yk        "]>span>span').text
-                                    img_src = post.find_element_by_css_selector('div[class="z82Jr"]>img').get_attribute("srcset").split(" ")[0]
+                                    img_src = post.find_element_by_css_selector('img[decoding="auto"]').get_attribute("srcset").split(" ")[0]
                                     #This section of the code works mac only
                                     post.find_element_by_css_selector('div[class="z82Jr"]').click()
                                     post_url = driver.current_url
@@ -114,36 +217,23 @@ class InstagramManager(InstagramBot):
 
                                     #Exit after retrieving information
                                 except (NoSuchElementException, StaleElementReferenceException) as e:
-                                    self.log(logging.NOTSET, "Ignoring old messages...")
+                                    self.log(logging.NOTSET, "Old message unaccessible...")
                                 else:
                                     #Post_Item Organization
-                                    post_item = (post_user, post_desc, post_url, op, img_src)
+                                    post_item = (post_user, post_url, op, img_src, datetime.datetime.now())
 
-                                    if (post_item[0], post_item[1]) not in [(p[0], p[1]) for p in self.posts_queued_for_approval()]:
-                                        self.log(self.FINISHED_LEVEL, "Queued post from user \"{}\" for acceptance.".format(post_user))
-                                        self.all_posts_for_approval.append(post_item) #TODO: Make this add to DB instead
+                                    self.log(logging.DEBUG, "Posts queued for approval: " + str(self.posts_queued_for_approval()))
+
+                                    self.log(logging.DEBUG, "Post URL: {}".format(post_url))
+                                    if post_url not in self.posts_queued_for_approval():
                                         self.getting_permission_queue.put(post_item)
+                                        self.log(self.FINISHED_LEVEL, "Queued post from user \"{}\" for acceptance.".format(post_user))
+                                        self.reply_message(driver, "Received and filed!")
+                                        self.db.add_post_approval((self.platform, self.username, post_user, post_url, op, img_src, post_item[4]))
                                     else:
-                                        self.log(logging.INFO, "Post already queued.")
+                                        self.reply_message(driver, "Duplicate post!")
+                                        self.log(logging.INFO, "Post already handled.")
                             self.go_to_inbox(driver)
-                        except NoSuchElementException:
-                            self.log(logging.INFO, "No new messages from {}.".format(op))
-
-                    for p in list(self.pending_approval_list):
-                        try:
-                            mthread = driver.find_element_by_xpath('//*[contains(text(), "{}")]/../../../../../../div[@class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]'.format(p[0]))
-                            self.log(logging.INFO, "Found message from {}.".format(p[0]))
-                            mthread.click()
-
-                            msgs = driver.find_elements_by_css_selector('div[class="                   Igw0E     IwRSH        YBx95       _4EzTm                                                                                   XfCBB            g6RW6               "]')
-                            for msg in msgs:
-                                if self.permission_is_granted(msg.find_element_by_css_selector('div>span').text):
-                                    self.pending_approval_list.remove(p)
-                                    self.log(self.FINISHED_LEVEL, "Permission granted by {}".format(p[0]))
-                                    self.posting_queue.put(p)
-                                    break
-                        except NoSuchElementException:
-                            self.log(logging.DEBUG, "{} hasn't answered back.".format(p[0]))
 
                 except Exception as e:
                     self.log(logging.ERROR, "Failed getting new messages: {}".format(e))
@@ -161,9 +251,22 @@ class InstagramManager(InstagramBot):
     def posts_queued_for_approval(self):
         """
         Returns a list of all the posts ever queued for approval
-        #TODO: Retrieve these from databse
+        #TODO: Retrieve these from database
         """
-        return self.all_posts_for_approval
+
+        query = """select post_url from managerPostApproval
+                    where platform = ? and username = ?
+                    """
+        
+        return [p[0] for p in self.db.query(query, (self.platform, self.username))]
+
+
+    def reply_message(self, driver, msg):
+        """
+        You must be with a message thread in focus 
+        """
+        msg += "\n"
+        driver.find_element_by_css_selector('textarea[placeholder="Message..."]').send_keys(msg)
 
 
     def send_message(self, driver, user, msg):
@@ -178,27 +281,28 @@ class InstagramManager(InstagramBot):
         driver.find_element_by_css_selector('textarea[placeholder="Message..."]').send_keys(msg)
 
     def get_posting_permissions(self):
+        time.sleep(5)
         driver = self.init_driver(managefunction="get_posting_permissions")
         self.log(logging.NOTSET, "Permissions driver {}".format(driver))
         driver.implicitly_wait(5) #TODO: set to higher number?
         try:
             super().login(driver)
             while True:
-                # self.go_to_inbox(driver)
                 try:
-                    #I know some things are repeating, but it's the full workflow, and it repeats just twice.
                     p = self.getting_permission_queue.get()
-                    self.log(logging.INFO, "Getting permissions for post {}".format(p[0], p[1]))
-                    driver.get(p[2])
+                except queue.Empty:
+                    self.log(logging.INFO, "No posts pending approval.")
+                else:
+                    self.log(logging.INFO, "Getting permissions for post {}".format(p[0]))
+                    self.send_message(driver, p[0], self.generate_approach(p))
+                    driver.get(p[1])
                     driver.find_element_by_xpath('//*[@aria-label="Share Post"]/..').click()
                     driver.find_element_by_xpath('//*[contains(text(), "Share to Direct")]/../../../../..').click()
                     driver.find_element_by_css_selector('input[placeholder="Search..."]').send_keys("@{}".format(p[0]))
                     driver.find_elements_by_css_selector('div.-qQT3>div>div[class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]')[0].click()
                     driver.find_element_by_xpath('//*[contains(text(), "Send")]').click()
-                    self.send_message(driver, p[0], self.generate_approach(p))
                     self.pending_approval_list.append(p)
-                except queue.Empty:
-                    self.log(logging.INFO, "No posts pending approval.")
+                    self.db.sent_permission_request((self.platform, self.username, p[1]))
                 finally:
                     self.go_to_inbox(driver)
                     # time.sleep(10) #TODO: Replace with (3600 / self.MAX_PERMISSIONS_PER_HOUR)
@@ -211,9 +315,17 @@ class InstagramManager(InstagramBot):
         """
         Generates a message sent to users. Must include line breaks so the message gets sent
         """
-        return """
-                Hey! One of our curators marked this image, and we want your permission to repost it, with due credits, on our page. This is an automated message. If you have any question, DM the curator who selected your post (@{}). If you allow us to feature you, reply just "ALLOW". Thank you, Rodri and Tony.
-                """.format(p[3])
+
+        m1 = """Hey! One of our curators marked this image, and we want your permission to repost it, with due credits, on our page. This is an automated message. If you have any question, DM the curator who selected your post (@{}). If you allow us to feature you, reply just "ALLOW". Thank you, Rodri and Tony.
+                """
+
+        m = m1
+
+        if self.permission_message != "":
+            m = self.permission_message
+
+
+        return m.format(p[2])
 
     
     def download_image(self, url):
@@ -241,7 +353,7 @@ class InstagramManager(InstagramBot):
             f.write(r.content)
             f.close()
             self.log(logging.DEBUG, "Successfully downloaded image.")
-            return (r.content, filepath)
+            return filepath
         else:
             e = FailedImageDownload()
             self.log(logging.ERROR, str(e))
@@ -249,15 +361,21 @@ class InstagramManager(InstagramBot):
 
     
 
-    def post_photo(self, driver, imgb, caption):
+    def post_photo(self, driver, filepath, caption):
         """
         Params:
+        driver: driver
         imgb: image bytecode
         caption: caption
         """
-        upload_id = str(int(time.time()))
-        requests.post("https://instagram.com/create/upload/photo/", data={"formData": {"upload_id": upload_id, "photo": str(imgb), "media_type": "1"}})
-        requests.post("POST", "https://instagram.com/create/configure/", data={"form": {upload_id, caption}})
+        driver.find_element_by_css_selector("div[data-testid='new-post-button']").click()
+
+        inelall = driver.find_elements_by_css_selector('input[type="file"]')
+        inelall[len(inelall)-1].send_keys(os.path.abspath(filepath))                
+        driver.find_element_by_css_selector("button.UP43G").click()
+
+        driver.find_element_by_css_selector('textarea[aria-label="Write a caption…"]').send_keys(caption)
+        driver.find_element_by_css_selector("button.UP43G").click()
         
 
     def create_caption(self, user):
@@ -274,28 +392,29 @@ class InstagramManager(InstagramBot):
             while True:
                 try:
                     p = self.posting_queue.get()
-                    self.log(logging.INFO, "Posting to feed with credits to {}".format(p[0]))
-
-                    imgb, relpath = self.download_image(p[4]) #p4 = 1080p img url
-
-                    self.post_photo(driver, imgb, self.create_caption(p[0]))
-
-                    # inel = driver.find_elements_by_css_selector('input[type="file"]')[2]
-                    # inel.send_keys(os.path.abspath(filepath))
-                    
-                    # driver.find_element_by_css_selector("div[data-testid='new-post-button']").click()
-
+                    self.log(logging.INFO, str(driver.current_url))
                 except queue.Empty:
                     self.log(logging.INFO, "Waiting for approved posts...")
+                else:
+                    self.log(logging.INFO, "Posting to feed with credits to {}".format(p[0]))
+
+                    path = self.download_image(p[3]) #p4 = 1080p img url
+
+                    self.post_photo(driver, path, self.create_caption(p[0]))
+                    self.db.posted_approved_post((self.platform, self.username, p[1]))
+
+                    self.log(self.FINISHED_LEVEL, "Posted successfully image by {}!".format(p[0]))
+
                 finally:
                     time.sleep(10) #TODO: Replace with amount of time between posts?
         except Exception as e:
             self.log(logging.ERROR, "Exiting: {}".format(e))
+            traceback.print_exc()
             driver.quit()
                 
 
 if __name__ == "__main__":
     
-    igm = InstagramManager(credentials["instagram"][2]['username'], credentials["instagram"][2]['password'], ["rodrigommesquita", "_soopm"])
-
+    igm = InstagramManager(credentials["instagram"][2]['username'], credentials["instagram"][2]['password'], ["rodrigommesquita", "_soopm"], "dbbots.db")
+    # igm = InstagramManager(credentials["instagram"][3]['username'], credentials["instagram"][3]['password'], credentials["instagram"][3]["ops"], "dbbots.db", credentials["instagram"][3]["permission_message"])
     igm.manage()

@@ -18,6 +18,64 @@ class Database:
         self.conn.commit()
         return cur.fetchall()
 
+
+    def add_post_approval(self, postApproval):
+
+        insert = ''' INSERT OR IGNORE INTO managerPostApproval(platform, username, post_op, post_url, operator, img_src, sent_request, approved, posted, time)
+            VALUES(?, ?, ?, ?, ?, ?, 0, 0, 0, ?)
+                '''
+        cur = self.conn.cursor()
+        cur.execute(insert, postApproval)
+        self.conn.commit()
+    
+    def invalidate_post_approval(self, postInv):
+        """
+        approved = 0 pending
+        approved = 1 accepted
+        approved = 2 timelimit for approval was exceeded
+        """
+        update = """ UPDATE managerPostApproval
+                        SET approved = 2
+                    WHERE platform=? AND username=? AND post_url=?
+                """
+
+        cur = self.conn.cursor()
+        cur.execute(update, post)
+        self.conn.commit() 
+
+    def sent_permission_request(self, post):
+        
+        update = """ UPDATE managerPostApproval
+                        SET sent_request = 1
+                    WHERE platform=? AND username=? AND post_url=?
+                """
+
+        cur = self.conn.cursor()
+        cur.execute(update, post)
+        self.conn.commit()
+
+    def approve_post_approval(self, postApproved):
+        
+        update = """ UPDATE managerPostApproval
+                        SET approved = 1
+                    WHERE platform=? AND username=? AND post_url=?
+                """
+
+        cur = self.conn.cursor()
+        cur.execute(update, postApproved)
+        self.conn.commit()
+
+    def posted_approved_post(self, postApproved):
+        
+        update = """ UPDATE managerPostApproval
+                        SET posted = 1
+                    WHERE platform=? AND username=? AND post_url=?
+                """
+
+        cur = self.conn.cursor()
+        cur.execute(update, postApproved)
+        self.conn.commit()
+
     def add_instagram_followers(self, accfollowers):
 
         insert = ''' INSERT OR REPLACE INTO accFollowers(platform, username, follower, time_detected)
@@ -173,6 +231,22 @@ class Database:
                                                 PRIMARY KEY (username, platform, time_start)
                                             ); """
 
+
+            managerpostapproval_table = """ CREATE TABLE IF NOT EXISTS managerPostApproval (
+                                                platform text NOT NULL,
+                                                username text NOT NULL,
+                                                post_op text NOT NULL,
+                                                post_url text NOT NULL,
+                                                operator text NOT NULL,
+                                                img_src text NOT NULL,
+                                                sent_request integer NOT NULL,
+                                                approved integer NOT NULL,
+                                                posted integer NOT NULL,
+                                                time timestamp NOT NULL,
+                                                FOREIGN KEY (username, platform) REFERENCES accounts (username, platform),
+                                                PRIMARY KEY (username, platform, post_url)
+                                            ); """
+
             self.create_table(accounts_table)
             self.create_table(likejobs_table)
             self.create_table(acchashtags_table)
@@ -180,6 +254,7 @@ class Database:
             self.create_table(likedpostshashtags_table)
             self.create_table(accfollowers_table)
             self.create_table(likejobsinstagram_table)
+            self.create_table(managerpostapproval_table)
         
         else:
             print("Error connecting to database!")
