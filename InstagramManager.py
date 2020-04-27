@@ -69,8 +69,8 @@ class InstagramManager(InstagramBot):
             publishposts = threading.Thread(target=self.publish_posts)
             threads.append(publishposts)
 
-            # runlikes = threading.Thread(target=self.run, args=())
-            # threads.append(runlikes)
+            runlikes = threading.Thread(target=self.run, args=())
+            threads.append(runlikes)
 
             for t in threads:
                 t.start()
