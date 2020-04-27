@@ -38,6 +38,9 @@ class InstagramManager(InstagramBot):
         self.timedelta_between_permission_request = timedelta_between_permission_request
         self.timedelta_between_posts = timedelta_between_posts
 
+        #for the run function
+        self.run_params = [likehashtags, maxlikes]
+
         if ops == []:
             ops = [username]
 
@@ -60,16 +63,17 @@ class InstagramManager(InstagramBot):
         try:
             threads = list()
 
-            getmessages = threading.Thread(target=self.get_new_messages)
-            threads.append(getmessages)
+            # getmessages = threading.Thread(target=self.get_new_messages)
+            # threads.append(getmessages)
 
-            getpermissions = threading.Thread(target=self.get_posting_permissions)
-            threads.append(getpermissions)
+            # getpermissions = threading.Thread(target=self.get_posting_permissions)
+            # threads.append(getpermissions)
 
-            publishposts = threading.Thread(target=self.publish_posts)
-            threads.append(publishposts)
+            # publishposts = threading.Thread(target=self.publish_posts)
+            # threads.append(publishposts)
 
-            runlikes = threading.Thread(target=self.run, args=())
+            #TODO: make "run" run on it's on in cloud computer
+            runlikes = threading.Thread(target=self.run, args=(self.run_params, ))
             threads.append(runlikes)
 
             for t in threads:
@@ -446,14 +450,6 @@ class InstagramManager(InstagramBot):
             traceback.print_exc()
         finally:
             self.quit(driver)
-
-    
-    def quit(self, driver=None):
-
-        if self.first_run:
-            self.log(self.FINISHED_LEVEL, "Completed setup for the first run. Please relaunch to run the program.")
-
-        super().quit(driver)
                 
 
 if __name__ == "__main__":

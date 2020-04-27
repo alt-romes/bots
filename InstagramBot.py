@@ -170,11 +170,15 @@ class InstagramBot(Bot):
         time.sleep(5)
         self.driver.find_element_by_css_selector('a[href="/{}/{}/"]'.format(username, mode)).click()
         time.sleep(3)
-        self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
-        time.sleep(3)
-        follows = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
-        follows_list = [follow.text for follow in follows]
-        self.log(logging.INFO, "Looked up {} list from {}.".format(mode, username))
+        try:
+            self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
+            time.sleep(3)
+            follows = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
+            follows_list = [follow.text for follow in follows]
+            self.log(logging.INFO, "Looked up {} list from {}.".format(mode, username))
+        except NoSuchElementException:
+            self.log(logging.INFO, "{} has no {}.".format(username, mode))
+            follows_list = []
 
         if self.db is not None and username==self.username and mode=="followers":
             self.db.add_instagram_followers( list( map( (lambda follower: (self.get_platform(), self.get_username(), follower, datetime.datetime.now())), follows_list ) ) )
@@ -510,6 +514,7 @@ class InstagramBot(Bot):
             #     self.log(logging.INFO, "Users not following back {} ({}): \n{}".format(self.username, len(a), a))
                 # self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
 
+
             if(self.max_likes>0):
 
                 if self.driver is None:
@@ -517,9 +522,10 @@ class InstagramBot(Bot):
 
                 self.login()
 
-                self.like_hashtags(params[0])
+                if not self.first_run:
+                    self.like_hashtags(params[0])
 
-                self.get_follows_list()
+                    self.get_follows_list()
 
         finally:
             self.quit()

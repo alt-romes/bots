@@ -238,6 +238,9 @@ class Bot:
         except Exception as e:
             self.log(logging.ERROR, "Probably there is no user data dir set:\nUser data dir: {}.\nError: {}".format(self.user_data_dir, e))
 
+        if self.first_run:
+            self.log(self.FINISHED_LEVEL, "Completed setup for the first run. Please relaunch to run the program.")
+
         self.time_ended = datetime.datetime.now()
         
         if self.db is not None:
