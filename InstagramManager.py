@@ -63,14 +63,14 @@ class InstagramManager(InstagramBot):
         try:
             threads = list()
 
-            # getmessages = threading.Thread(target=self.get_new_messages)
-            # threads.append(getmessages)
+            getmessages = threading.Thread(target=self.get_new_messages)
+            threads.append(getmessages)
 
-            # getpermissions = threading.Thread(target=self.get_posting_permissions)
-            # threads.append(getpermissions)
+            getpermissions = threading.Thread(target=self.get_posting_permissions)
+            threads.append(getpermissions)
 
-            # publishposts = threading.Thread(target=self.publish_posts)
-            # threads.append(publishposts)
+            publishposts = threading.Thread(target=self.publish_posts)
+            threads.append(publishposts)
 
             #TODO: make "run" run on it's on in cloud computer
             runlikes = threading.Thread(target=self.run, args=(self.run_params, ))
@@ -130,6 +130,12 @@ class InstagramManager(InstagramBot):
         for p in pending_publish:
             hashtags = [h[0] for h in self.db.query(get_tags_query, (p[1],))]
             self.posting_queue.put(p + (hashtags,))
+
+
+    def run(self, p):
+        while True:
+            super().run(p)
+            time.sleep(25600) #wait around 7 hours
 
 
     def go_to_inbox(self, driver):
