@@ -19,7 +19,7 @@ class Database:
         return cur.fetchall()
 
 
-    def add_post_approval(self, postApproval):
+    def add_post_approval(self, postApproval, hashtags):
 
         insert = ''' INSERT OR IGNORE INTO managerPostApproval(platform, username, post_op, post_url, operator, img_src, sent_request, approved, posted, time)
             VALUES(?, ?, ?, ?, ?, ?, 0, 0, 0, ?)
@@ -27,6 +27,15 @@ class Database:
         cur = self.conn.cursor()
         cur.execute(insert, postApproval)
         self.conn.commit()
+
+
+        insertHashtags = ''' INSERT OR IGNORE INTO managerPostApprovalHashtags(platform, username, post_url, hashtag)
+            VALUES(?, ?, ?, ?)
+                '''
+        cur = self.conn.cursor()
+        cur.executemany(insert, [(postApproval[0], postApproval[1], postApproval[3], h) for h in hashtags])
+        self.conn.commit()  
+
     
     def invalidate_post_approval(self, postInv):
         """
@@ -35,7 +44,7 @@ class Database:
         approved = 2 timelimit for approval was exceeded
         """
         update = """ UPDATE managerPostApproval
-                        SET approved = 2
+                        SET approved = -1
                     WHERE platform=? AND username=? AND post_url=?
                 """
 
@@ -246,6 +255,15 @@ class Database:
                                                 FOREIGN KEY (username, platform) REFERENCES accounts (username, platform),
                                                 PRIMARY KEY (username, platform, post_url)
                                             ); """
+                                            
+            managerpostapprovalhashtags_table = """ CREATE TABLE IF NOT EXISTS managerPostApprovalHashtags (
+                                                        platform text NOT NULL,
+                                                        username text NOT NULL,
+                                                        post_url text NOT NULL,
+                                                        hashtag text NOT NULL,
+                                                        FOREIGN KEY (username, platform, post_url) REFERENCES managerPostApproval (username, platform, post_url),
+                                                        PRIMARY KEY (username, platform, post_url, hashtag)
+                                                    ); """
 
             self.create_table(accounts_table)
             self.create_table(likejobs_table)
@@ -255,6 +273,7 @@ class Database:
             self.create_table(accfollowers_table)
             self.create_table(likejobsinstagram_table)
             self.create_table(managerpostapproval_table)
+            self.create_table(managerpostapprovalhashtags_table)
         
         else:
             print("Error connecting to database!")

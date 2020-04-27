@@ -77,9 +77,8 @@ class InstagramBot(Bot):
             self.log(logging.INFO, "Already logged in.")
 
         try:
-            time.sleep(3)
+            time.sleep(5)
             driver.find_element_by_css_selector('button.bIiDR').click()
-            time.sleep(3)
         except NoSuchElementException:
             self.log(logging.INFO, "Has already enabled notifications.")
 
@@ -113,28 +112,28 @@ class InstagramBot(Bot):
             time.sleep(8)
             driver.find_element_by_xpath('//*[contains(text(), "Log In")]/../..').click()
             time.sleep(8)
-            try:
-                driver.find_element_by_xpath('//*[contains(text(), "Save Info")]').click()
-                time.sleep(8)
-                driver.find_element_by_xpath('//*[contains(text(), "Cancel")]').click()
-                time.sleep(8)
-                driver.find_element_by_xpath('//*[contains(text(), "Not Now")]').click()
-                time.sleep(8)
-            except Exception as e:
-                self.log(logging.DEBUG, "Wasn't prompted aditional buttons after Save Info")
-            if driver.current_url != self.base_url:
-                raise FailedLogin()
         except NoSuchElementException:
             self.log(logging.INFO, "Already logged in.")
-
         except Exception as e:
             self.log(logging.ERROR, "Error logging in: {}".format(e))
             traceback.print_exc()
             return False
-        else:
-            self.is_logged_in = True
-            self.log(logging.INFO, "Logged in mobile!")
-            return True
+        try:
+            driver.find_element_by_xpath('//*[contains(text(), "Save Info")]').click()
+            time.sleep(8)
+            driver.find_element_by_xpath('//*[contains(text(), "Cancel")]').click()
+            time.sleep(8)
+            driver.find_element_by_xpath('//*[contains(text(), "Not Now")]').click()
+            time.sleep(8)
+        except Exception as e:
+            self.log(logging.DEBUG, "Wasn't prompted aditional buttons after Save Info")
+            
+        if driver.current_url != self.base_url:
+            raise FailedLogin()
+
+        self.is_logged_in = True
+        self.log(logging.INFO, "Logged in mobile!")
+        return True
 
     def get_number_of_posts(self):
         if self.ig_api is not None:

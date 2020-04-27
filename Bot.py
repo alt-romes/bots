@@ -23,6 +23,7 @@ import random
 import sys
 import requests
 import json
+import pickle
 
 from Database import Database
 
@@ -100,6 +101,8 @@ class Bot:
             user_data_dir = os.path.abspath("profiles/{}/{}".format(self.platform, self.username))
         else:
             user_data_dir = os.path.abspath("profiles/managers/{}/{}/{}".format(self.platform, self.username, managefunction))
+        
+        self.user_data_dir = user_data_dir
 
         self.chrome_options.add_argument("--user-data-dir={}".format(user_data_dir)) #TODO: Should I Keep The Data Dir ??
         self.log(logging.DEBUG, "Chrome --user-data-dir set to " + user_data_dir)
@@ -107,8 +110,19 @@ class Bot:
         if "--debug" not in sys.argv or "--headless" in sys.argv :
             self.chrome_options.add_argument("--headless")
 
+        self.first_run = True
         try:
-            return webdriver.Chrome(options=self.chrome_options)
+            driver = webdriver.Chrome(options=self.chrome_options)
+            try:
+                cookies = pickle.load(open("{}/cookies.pkl".format(user_data_dir), "rb"))
+            except FileNotFoundError:
+                self.log(logging.INFO, "Running for the first time! Setting up profiles...")
+            else:
+                self.first_run = False
+                driver.get(self.base_url)
+                for cookie in cookies:
+                    driver.add_cookie(cookie)
+            return driver
         except Exception as e:
             self.log(logging.ERROR, "While setting up driver: " + str(e))
             raise e
@@ -128,7 +142,7 @@ class Bot:
         msgs = [message[i:i+2000] for i in range(0, len(message), 2000)]
 
         #Send message to discord
-        if level > logging.ERROR:
+        if level >= logging.ERROR:
             for msg in msgs:
                 discord_message = {
                     "content": msg[:2000],
@@ -212,15 +226,23 @@ class Bot:
     def get_report_string(self):
         return "This method must be implemented by subclasses! Also, I should learn better how OOP works in python..."
 
-    def quit(self):
+    def quit(self, driver=None):
+        if driver==None:
+            driver = self.driver
+
         if self.get_likes_given()<self.get_max_likes() or self.get_max_likes()>0:
             self.log(self.FINISHED_LEVEL, self.get_report_string())
+
+        try:
+            pickle.dump( driver.get_cookies() , open("{}/cookies.pkl".format(self.user_data_dir),"wb") )
+        except Exception as e:
+            self.log(logging.ERROR, "Probably there is no user data dir set:\nUser data dir: {}.\nError: {}".format(self.user_data_dir, e))
 
         self.time_ended = datetime.datetime.now()
         
         if self.db is not None:
             self.db.close()
 
-        if self.driver is not None:
-            self.driver.quit()
-            self.driver = None
+        if driver is not None:
+            driver.quit()
+            driver = None
