@@ -60,3 +60,8 @@ class NoNewMessagesFromUser(BotError):
     def __str__(self):
         return self.message
 
+class FailedLogin(BotError):
+    def __init__(self, message="Failed login!"):
+        self.message = message
+    def __str__(self):
+        return self.message

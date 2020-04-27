@@ -4,7 +4,7 @@ from selenium.common.exceptions import NoSuchElementException, ElementClickInter
 
 #Parent class
 from Bot import Bot
-from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials, NoDatabase, NoDriver
+from exceptions.BotExceptions import NotConfiguredAPI, NotLoggedIn, NoAccountCredentials, NoDatabase, NoDriver, FailedLogin
 
 #Instagram API module
 from InstagramAPI import InstagramAPI
@@ -91,6 +91,9 @@ class InstagramBot(Bot):
         # except Exception as e:
         #     self.log(logging.DEBUG, "Couldn't find user's page name: " + str(e))
 
+        if driver.current_url != self.base_url:
+                raise FailedLogin()
+
         self.is_logged_in = True
         self.log(logging.INFO, "Logged in.")
         time.sleep(1)
@@ -119,6 +122,8 @@ class InstagramBot(Bot):
                 time.sleep(8)
             except Exception as e:
                 self.log(logging.DEBUG, "Wasn't prompted aditional buttons after Save Info")
+            if driver.current_url != self.base_url:
+                raise FailedLogin()
         except NoSuchElementException:
             self.log(logging.INFO, "Already logged in.")
 
@@ -336,6 +341,19 @@ class InstagramBot(Bot):
 
         #Time to like post
         time.sleep(random.uniform(2.5, 6))
+
+        try:
+            self.driver.find_element_by_css_selector('div[aria-label="Control"]').click()
+            time.sleep(random.randrange(6, 18))
+        except NoSuchElementException:
+            self.log(logging.NOTSET, "Not a video.")
+
+        try:
+            while True:
+                self.driver.find_element_by_css_selector('button._6CZji').click()
+                time.sleep(random.randrange(2, 4))
+        except NoSuchElementException:
+            self.log(logging.NOTSET, "Not a gallery.")
 
         #Like post
         self.driver.find_element_by_class_name("wpO6b").click()

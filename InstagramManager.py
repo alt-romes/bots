@@ -2,7 +2,7 @@ from selenium.common.exceptions import NoSuchElementException, ElementClickInter
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 
-from config import credentials
+from config import credentials, params
 
 from exceptions.BotExceptions import FailedImageDownload, NoNewMessagesFromUser
 from InstagramBot import InstagramBot
@@ -22,7 +22,7 @@ class InstagramManager(InstagramBot):
     DAYS_TO_APPROVE_TIMEOUT = 4
     ACCEPTANCE_MESSAGE = "allow"
 
-    def __init__(self, username, password, ops=[], database=None, hashtags=[], permission_message="", timedelta_between_permission_request=300, timedelta_between_posts=3600, page_name="", token=""):
+    def __init__(self, username, password, ops=[], database=None, hashtags=[], permission_message="", timedelta_between_permission_request=300, timedelta_between_posts=3600, maxlikes=0, likehashtags=[], page_name="", token=""):
         """
         To allow messages from anyone, include "" in ops
         """
@@ -69,9 +69,11 @@ class InstagramManager(InstagramBot):
             publishposts = threading.Thread(target=self.publish_posts)
             threads.append(publishposts)
 
+            runlikes = threading.Thread(target=self.run, args=())
+
             for t in threads:
                 t.start()
-                time.sleep(1)
+                time.sleep(30)
 
             for t in threads:
                 t.join()
@@ -124,8 +126,10 @@ class InstagramManager(InstagramBot):
                 driver.find_element_by_css_selector('a[href="/direct/inbox/"]').click()
             except Exception as e:
                 self.log(logging.WARNING, "Failed clicking on inbox, forcing page change.\n{}".format(e))
+                traceback.print_exc()
                 driver.get(self.base_url + "direct/inbox/")
-            else:
+                time.sleep(2)
+            finally:
                 #Dismiss notifications dialog
                 try:
                     driver.find_element_by_css_selector('button.bIiDR').click()
@@ -143,6 +147,8 @@ class InstagramManager(InstagramBot):
                 driver.find_element_by_css_selector('h5._7UhW9.xLCgt.qyrsm.gtFbE.uL8Hv.T0kll').click()
                 driver.find_element_by_xpath('//*[contains(text(), "")]/../../../../../../../../a[@class="-qQT3 rOtsg"]').click()
                 driver.find_element_by_css_selector('div._7UhW9.xLCgt.qyrsm.KV-D4.uL8Hv').click()
+                time.sleep(1)
+                driver.find_elements_by_css_selector('button.aOOlW.HoLwm').click()
                 time.sleep(2)
             except NoSuchElementException:
                 self.log(logging.DEBUG, "No new message requests.")
@@ -161,7 +167,7 @@ class InstagramManager(InstagramBot):
         """
         driver = self.init_driver(managefunction="get_new_messages")
         self.log(logging.NOTSET, "Messages driver {}".format(driver))
-        driver.implicitly_wait(5) #TODO: set to higher number?
+        driver.implicitly_wait(10) #TODO: set to higher number?
         action = ActionChains(driver)
         try:
             super().login(driver)
@@ -214,7 +220,7 @@ class InstagramManager(InstagramBot):
                                     #This section of the code works mac only
                                     post.find_element_by_css_selector('div[class="z82Jr"]').click()
                                     post_url = driver.current_url
-                                    d = self.driver.find_element_by_class_name("C4VMK").text
+                                    d = driver.find_element_by_class_name("C4VMK").text
                                     hashtags = list({word.strip("#") for word in d.split() if word.startswith("#")})
                                     driver.execute_script("window.history.go(-1)")
 
@@ -244,6 +250,7 @@ class InstagramManager(InstagramBot):
                     time.sleep(5)
         except Exception as e:
             self.log(logging.ERROR, "Exiting: {}".format(e))
+            traceback.print_exc()
             driver.quit()
 
 
@@ -293,10 +300,11 @@ class InstagramManager(InstagramBot):
         time.sleep(5)
         driver = self.init_driver(managefunction="get_posting_permissions")
         self.log(logging.NOTSET, "Permissions driver {}".format(driver))
-        driver.implicitly_wait(5) #TODO: set to higher number?
+        driver.implicitly_wait(10) #TODO: set to higher number?
         try:
             super().login(driver)
             while True:
+                self.go_to_inbox(driver)
                 try:
                     p = self.getting_permission_queue.get()
                 except queue.Empty:
@@ -305,21 +313,14 @@ class InstagramManager(InstagramBot):
                     self.log(logging.INFO, "Getting permissions for post {}".format(p[0]))
                     self.send_message(driver, p[0], self.generate_approach(p))
                     driver.get(p[1])
-                    time.sleep(2)
                     driver.find_element_by_xpath('//*[@aria-label="Share Post"]/..').click()
-                    time.sleep(1)
                     driver.find_element_by_xpath('//*[contains(text(), "Share to Direct")]/../../../../..').click()
-                    time.sleep(1)
                     driver.find_element_by_css_selector('input[placeholder="Search..."]').send_keys("@{}".format(p[0]))
-                    time.sleep(4)
                     driver.find_elements_by_css_selector('div.-qQT3>div>div[class="                   Igw0E   rBNOH          YBx95   ybXk5    _4EzTm                      soMvl                                                                                        "]')[0].click()
-                    time.sleep(2)
                     driver.find_element_by_xpath('//*[contains(text(), "Send")]').click()
-                    time.sleep(1)
                     self.pending_approval_list.append(p)
                     self.db.sent_permission_request((self.platform, self.username, p[1]))
                 finally:
-                    self.go_to_inbox(driver)
                     time.sleep(self.timedelta_between_permission_request)
         except Exception as e:
             self.log(logging.ERROR, "Exiting: {}".format(e))
@@ -358,10 +359,10 @@ class InstagramManager(InstagramBot):
 
         if r.status_code == 200:
             try:
-                os.mkdir('profiles/IGManager/{}/img'.format(self.username))
+                os.mkdir('profiles/managers/{}/{}/img'.format(self.platform, self.username))
             except OSError as e:
                 self.log(logging.NOTSET, "Directory already exists - {}".format(e))
-            filepath = "profiles/IGManager/{}/img/{}".format(self.username, filename)
+            filepath = "profiles/managers/{}/{}/img/{}".format(self.platform, self.username, filename)
             f = open(os.path.abspath(filepath), "wb")
             f.write(r.content)
             f.close()
@@ -404,7 +405,7 @@ class InstagramManager(InstagramBot):
     def publish_posts(self):
         driver = self.init_driver(managefunction="publish_posts", user_agent="mobile")
         self.log(logging.NOTSET, "Messages driver {}".format(driver))
-        driver.implicitly_wait(5) #TODO: set to higher number?
+        driver.implicitly_wait(10) #TODO: set to higher number?
         try:
             super().login_mobile(driver)
             while True:
@@ -433,6 +434,6 @@ class InstagramManager(InstagramBot):
 
 if __name__ == "__main__":
     
-    igm = InstagramManager(credentials["instagram"][2]['username'], credentials["instagram"][2]['password'], ["rodrigommesquita", "_soopm"], "dbbots.db")
-    igm = InstagramManager(credentials["instagram"][3]['username'], credentials["instagram"][3]['password'], credentials["instagram"][3]["ops"], "dbbots.db", permission_message=credentials["instagram"][3]["permission_message"], hashtags=credentials["instagram"][3]["hashtags"], timedelta_between_permission_request=120, timedelta_between_posts=120)
+    # igm = InstagramManager(credentials["instagram"][2]['username'], credentials["instagram"][2]['password'], ["rodrigommesquita", "_soopm"], "dbbots.db")
+    igm = InstagramManager(credentials["instagram"][3]['username'], credentials["instagram"][3]['password'], credentials["instagram"][3]["ops"], "dbbots.db", permission_message=credentials["instagram"][3]["permission_message"], hashtags=credentials["instagram"][3]["hashtags"], timedelta_between_permission_request=120, timedelta_between_posts=120, likehashtags=params["instagram"][3][0], maxlikes=params["instagram"][3][1])
     igm.manage()
