@@ -16,6 +16,7 @@ import threading
 import queue
 import traceback
 import datetime
+import random
 
 class InstagramManager(InstagramBot):
 
@@ -72,7 +73,6 @@ class InstagramManager(InstagramBot):
             publishposts = threading.Thread(target=self.publish_posts)
             threads.append(publishposts)
 
-            #TODO: make "run" run on it's on in cloud computer
             runlikes = threading.Thread(target=self.run, args=(self.run_params, ))
             threads.append(runlikes)
 
@@ -133,9 +133,20 @@ class InstagramManager(InstagramBot):
 
 
     def run(self, p):
-        while True:
-            super().run(p)
-            time.sleep(25600) #wait around 7 hours
+        driver = self.init_driver(managefunction="run")
+        driver.implicitly_wait(10) #TODO: set to higher number? 
+        try:
+            super().login(driver)
+            while (True and self.run_params[1]>0):
+                super().run(p, driver=driver)
+                t=random.randrange(25600, 34600)
+                self.log(logging.INFO, "Sleeping for: {} hours.".format(t/3600))
+                time.sleep(t) #wait around 7 hours
+        except Exception as e:
+            self.log(logging.ERROR, "Failed running:\n{}".format(e))
+            traceback.print_exc()
+        finally:    
+            self.quit(driver)
 
 
     def go_to_inbox(self, driver):
@@ -189,7 +200,7 @@ class InstagramManager(InstagramBot):
         action = ActionChains(driver)
         try:
             super().login(driver)
-            while True and not self.first_run:
+            while True:
                 try:
                     self.go_to_inbox(driver)
 
@@ -322,7 +333,7 @@ class InstagramManager(InstagramBot):
         driver.implicitly_wait(10) #TODO: set to higher number?
         try:
             super().login(driver)
-            while True and not self.first_run:
+            while True:
                 self.go_to_inbox(driver)
                 try:
                     p = self.getting_permission_queue.get()
@@ -373,7 +384,7 @@ class InstagramManager(InstagramBot):
         """
         filename = url.split("/")[-1].split("?")[0]
 
-        while True and not self.first_run:
+        while True:
             try:
                 r = requests.get(url)
                 break

@@ -33,7 +33,7 @@ class Database:
             VALUES(?, ?, ?, ?)
                 '''
         cur = self.conn.cursor()
-        cur.executemany(insert, [(postApproval[0], postApproval[1], postApproval[3], h) for h in hashtags])
+        cur.executemany(insertHashtags, [(postApproval[0], postApproval[1], postApproval[3], h) for h in hashtags])
         self.conn.commit()  
 
     

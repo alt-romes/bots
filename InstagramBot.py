@@ -145,13 +145,16 @@ class InstagramBot(Bot):
             raise e
 
 
-    def get_follows_list(self, username=None, mode="followers"):
+    def get_follows_list(self, username=None, mode="followers", driver=None):
         """
         Gets followers or following list for a username, if none provided, your username is used
         Accounts must be public
         Mode: followers to get followers
         Mode: following to get following
         """
+        if driver==None:
+            driver = self.driver
+
         if not self.is_logged_in:
             e = NotLoggedIn()
             self.log(logging.ERROR, str(e))
@@ -166,14 +169,14 @@ class InstagramBot(Bot):
 
         self.log(logging.INFO, "Getting {} list for {}. . .".format(mode, username))
 
-        self.driver.get('https://www.instagram.com/{}/'.format(username))
+        driver.get('https://www.instagram.com/{}/'.format(username))
         time.sleep(5)
-        self.driver.find_element_by_css_selector('a[href="/{}/{}/"]'.format(username, mode)).click()
+        driver.find_element_by_css_selector('a[href="/{}/{}/"]'.format(username, mode)).click()
         time.sleep(3)
         try:
-            self.scroll_down(self.driver.find_element_by_css_selector('div.isgrP'))
+            self.scroll_down(driver.find_element_by_css_selector('div.isgrP'), driver=driver)
             time.sleep(3)
-            follows = self.driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
+            follows = driver.find_elements_by_css_selector('div.d7ByH>a.notranslate')
             follows_list = [follow.text for follow in follows]
             self.log(logging.INFO, "Looked up {} list from {}.".format(mode, username))
         except NoSuchElementException:
@@ -186,7 +189,10 @@ class InstagramBot(Bot):
         return follows_list
 
 
-    def get_not_following_back(self, username=None):
+    def get_not_following_back(self, username=None, driver=None):
+        if driver==None:
+            driver = self.driver
+
         if username is None:
             username = self.username
 
@@ -196,8 +202,8 @@ class InstagramBot(Bot):
 
         self.log(logging.INFO, "Getting users not following back for {}. . .".format(username))
 
-        followers_list = self.get_follows_list(username, mode="followers")
-        users = [user for user in self.get_follows_list(username, mode="following") if user not in followers_list] 
+        followers_list = self.get_follows_list(username, mode="followers", driver=driver)
+        users = [user for user in self.get_follows_list(username, mode="following", driver=driver) if user not in followers_list] 
         return users
 
 
@@ -207,15 +213,15 @@ class InstagramBot(Bot):
 
 
     # Assumes you're in a page with the activity feed button (notifications hear)
-    def scroll_activity_feed(self):
+    def scroll_activity_feed(self, driver=None):
         try:
             time.sleep(1)
-            self.driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
+            driver.find_element_by_css_selector('a[href="/accounts/activity/"]').click()
             time.sleep(3)
             if random.random()<0.5:
-                self.scroll_down(self.driver.find_element_by_css_selector('div._01UL2'), 0.05)
+                self.scroll_down(driver.find_element_by_css_selector('div._01UL2'), 0.05, driver=driver)
             time.sleep(3)
-            self.driver.execute_script('arguments[0].click();' ,self.driver.find_element_by_css_selector('div.wgVJm'))
+            driver.execute_script('arguments[0].click();' ,driver.find_element_by_css_selector('div.wgVJm'))
             time.sleep(1)
             self.log(logging.INFO, "Scrolled activity feed.")
         except Exception as e:
@@ -223,25 +229,25 @@ class InstagramBot(Bot):
 
 
     # It'll only watch new stories, mode="--home" if you're watching stories of who you follow, mode="--hashtag" if you're watching stories with a hashtag
-    def watch_new_stories(self, mode="--home"):
+    def watch_new_stories(self, mode="--home", driver=None):
 
         try:
             if mode=="--home" and not self.watch_feed_stories:
                 self.log(logging.INFO, "Not watching feed stories.")
                 return
             elif mode=="--home" and self.watch_feed_stories:
-                canvas = self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/section/div[3]/div[2]/div[2]/div/div/div/div[1]/button[@class="jZyv1  H-yu6"]/div[1]/canvas') #('button.jZyv1.H-yu6>div>canvas.CfWVH[height="44"]')
+                canvas = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/section/div[3]/div[2]/div[2]/div/div/div/div[1]/button[@class="jZyv1  H-yu6"]/div[1]/canvas') #('button.jZyv1.H-yu6>div>canvas.CfWVH[height="44"]')
                 if int(canvas.get_attribute("height")) % 11 == 0:
-                    self.driver.find_element_by_css_selector('button.jZyv1.H-yu6>div>span>img._6q-tv').click()
+                    driver.find_element_by_css_selector('button.jZyv1.H-yu6>div>span>img._6q-tv').click()
                 else:
                     raise NoSuchElementException()
             else:
-                self.driver.find_element_by_css_selector('div.T7reQ._0FuTv.pkWJh>div>div>img').click()
+                driver.find_element_by_css_selector('div.T7reQ._0FuTv.pkWJh>div>div>img').click()
             time.sleep(2)
             self.log(logging.INFO, "Watching new stories in --" + mode + ".")
             while True:
                 try:
-                    self.driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
+                    driver.find_element_by_css_selector('div.coreSpriteRightChevron').click()
                     if mode=="--home":
                         self.home_stories_seen+=1
                     else:
@@ -252,7 +258,7 @@ class InstagramBot(Bot):
                     self.log(logging.WARNING, "While clicking skip story: " + str(e))
                 finally:
                     try:
-                        self.driver.find_element_by_css_selector('section.carul')
+                        driver.find_element_by_css_selector('section.carul')
                     except NoSuchElementException:
                         self.log(logging.INFO, 'Finished watching stories.')
                         break
@@ -265,7 +271,7 @@ class InstagramBot(Bot):
 
 
     # Assumes you're on the front page aka your feed. It'll scroll and like pictures, at a lower rate than the ones in /new
-    def scroll_feed(self):
+    def scroll_feed(self, driver):
         #TODO
         #Scroll until it finds a post already liked
         #Clicks "more" on descriptions
@@ -274,7 +280,7 @@ class InstagramBot(Bot):
         pass
 
 
-    def go_to_profile(self):
+    def go_to_profile(self, driver):
         #TODO: Go to profile, click notifications, scroll a bit down
         # print("Going to profile!")
         pass
@@ -287,16 +293,18 @@ class InstagramBot(Bot):
 
 
     #Assumes you're on a page that has a clickable instagram reference to home page ( like their logo )
-    def be_human(self):
+    def be_human(self, driver=None):
+        if driver==None:
+            driver = self.driver
 
         self.log(logging.INFO, "Being human!")
-        if self.driver.current_url != self.base_url:
+        if driver.current_url != self.base_url:
             try:
-                self.driver.find_element_by_css_selector('a[href="/"]').click()
+                driver.find_element_by_css_selector('a[href="/"]').click()
             except Exception as e:
                 self.log(logging.ERROR, "Error searching for hashtag: " + str(e))
                 self.log(logging.WARNING, "Changing URL directly. . .")
-                self.driver.get(self.base_url)
+                driver.get(self.base_url)
             time.sleep(1.5)
 
         actions = [self.scroll_activity_feed, self.watch_new_stories, self.scroll_feed, self.go_to_profile]
@@ -304,7 +312,7 @@ class InstagramBot(Bot):
 
         for action in actions:
             if random.random() < 0.8:
-                action()
+                action(driver=driver)
 
         if random.random() < 0.05:
             self.take_a_break()        
@@ -313,59 +321,60 @@ class InstagramBot(Bot):
 
 
     # Assumes you're on front page, and there's a search bar
-    def search_for_hashtag(self, hashtag):
+    def search_for_hashtag(self, hashtag, driver):
         try:
-            search = self.driver.find_element_by_css_selector('input[placeholder="Search"]')
-            self.driver.execute_script("arguments[0].click();", search)
+            search = driver.find_element_by_css_selector('input[placeholder="Search"]')
+            driver.execute_script("arguments[0].click();", search)
             time.sleep(1.5)
             search.send_keys("#"+hashtag)
             time.sleep(4)
-            self.driver.find_element_by_css_selector('div.fuqBx>a[href="/explore/tags/'+hashtag+'/"]').click()
+            driver.find_element_by_css_selector('div.fuqBx>a[href="/explore/tags/'+hashtag+'/"]').click()
             time.sleep(4)
             self.log(logging.INFO, "Searched for hashtag succesfully.")
         except Exception as e:
             self.log(logging.ERROR, "Error searching for hashtag: " + str(e))
             self.log(logging.WARNING, "Changing URL directly. . .")
-            self.driver.get(self.base_url + 'explore/tags/' + hashtag)
+            driver.get(self.base_url + 'explore/tags/' + hashtag)
 
 
     def should_continue(self):
         return datetime.datetime.now() < datetime.timedelta(hours=self.MAX_RUN_HOURS) + self.time_started
     
     
-    def like_selected_post(self, hashtag):
+    def like_selected_post(self, hashtag, driver=None):
         """
         Pre: The post must be already selected
         Params: The hashtag it's on.
         Likes a post that's selected from the explore page, and adds it to the database if possible.
         """
 
-        #TODO: If is a video or multiple image, scroll through / watch the video.
+        if driver==None:
+            driver=self.driver
 
         #Time to like post
         time.sleep(random.uniform(2.5, 6))
 
         try:
-            self.driver.find_element_by_css_selector('div[aria-label="Control"]').click()
+            driver.find_element_by_css_selector('div[aria-label="Control"]').click()
             time.sleep(random.randrange(6, 18))
         except NoSuchElementException:
             self.log(logging.NOTSET, "Not a video.")
 
         try:
             while True:
-                self.driver.find_element_by_css_selector('button._6CZji').click()
+                driver.find_element_by_css_selector('button._6CZji').click()
                 time.sleep(random.randrange(2, 4))
         except NoSuchElementException:
             self.log(logging.NOTSET, "Not a gallery.")
 
         #Like post
-        self.driver.find_element_by_class_name("wpO6b").click()
+        driver.find_element_by_class_name("wpO6b").click()
 
         if self.db is not None:
             #Prepare data for database
             time_liked = datetime.datetime.now()
-            op = self.driver.find_element_by_class_name("e1e1d").text
-            d = self.driver.find_element_by_class_name("C4VMK").text
+            op = driver.find_element_by_class_name("e1e1d").text
+            d = driver.find_element_by_class_name("C4VMK").text
             hashtags = list({word.strip("#") for word in d.split() if word.startswith("#")})
             liked_post_entry = (self.get_username(), self.get_platform(), op, time_liked, hashtag) #op, time, hashtag liked in
 
@@ -382,38 +391,44 @@ class InstagramBot(Bot):
         #TODO: Randomly call function to check this profile, and if meets conditions, is followed and added to the DB.
 
 
-    def like_posts(self, hashtag, maxLikesPerHour):
+    def like_posts(self, hashtag, maxLikesPerHour, driver=None):
+
+        if driver==None:
+            driver=self.driver
 
         random_modifier = random.randrange(-14, 15)
 
         #Select first picture
-        self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/article/div[1]/div/div/div[1]/div[1]/a').click()
+        driver.find_element_by_xpath('//*[@id="react-root"]/section/main/article/div[1]/div/div/div[1]/div[1]/a').click()
         time.sleep(3)
 
         #For each the post
         while self.current_posts_liked < (maxLikesPerHour + random_modifier) and self.should_continue(): #and self.likes_given < self.max_likes:
             self.posts_seen+=1
-            isLiked = len(self.driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]'))>0
+            isLiked = len(driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]'))>0
 
             if(self.should_like_post() and not isLiked):
                 self.current_posts_liked+=1
-                self.like_selected_post(hashtag)
+                self.like_selected_post(hashtag, driver)
             
             #Time to move on
             time.sleep(random.uniform(2, 6))
 
             #Move on
-            self.driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
+            driver.find_element_by_class_name('coreSpriteRightPaginationArrow').click()
             time.sleep(2)
 
 
         #Close dialog
-        self.driver.find_element_by_css_selector('svg[aria-label="Close"]').click()
+        driver.find_element_by_css_selector('svg[aria-label="Close"]').click()
         time.sleep(random.randrange(4, 6))
 
 
     # Must be already in instagram in a page with the search bar and must be logged in
-    def like_hashtags(self, hashtags):
+    def like_hashtags(self, hashtags, driver=None):
+        
+        if driver==None:
+            driver=self.driver
 
         #Add to database hashtags chosen by user
         if self.db is not None:
@@ -439,18 +454,18 @@ class InstagramBot(Bot):
                         one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1)
 
                     #Already randomized
-                    self.be_human()
+                    self.be_human(driver=driver)
 
-                    self.search_for_hashtag(hashtag)
+                    self.search_for_hashtag(hashtag, driver)
                     time.sleep(1)
 
                     if random.random() < 0.8:
-                        self.watch_new_stories(hashtag)
+                        self.watch_new_stories(hashtag, driver)
                         time.sleep(3)
 
                     try:
                         if random.random() < 0.8:
-                            self.like_posts(hashtag, self.max_likes_per_hour)
+                            self.like_posts(hashtag, self.max_likes_per_hour, driver=driver)
                             time.sleep(2)
                     except NoSuchElementException as e:
                         self.log(logging.WARNING, "Forced hashtag switch: " + str(e))
@@ -473,7 +488,7 @@ class InstagramBot(Bot):
         #Handle errors
         except ElementClickInterceptedException as e:
             time.sleep(0.5)
-            if self.driver.find_elements_by_xpath("//*[contains(text(), 'Action Blocked')]") != []:
+            if driver.find_elements_by_xpath("//*[contains(text(), 'Action Blocked')]") != []:
                 self.status = "Action Blocked"
                 self.log(logging.CRITICAL, "Was action blocked!")
             else:
@@ -497,38 +512,31 @@ class InstagramBot(Bot):
                     self.log(logging.ERROR, "Error inserting row in a likejob table! " + str(e))
 
 
-    def run(self, params):
+    def run(self, params, driver=None):
         """
         params[0] is a list of hashtags
         params[1] is the max number of likes the bot can perform
         """
-
+        customDriver = True
         try:
             self.max_likes = random.randrange(int(params[1]*0.90), params[1]+1)
 
             super().print_bot_starting()
 
-            # if self.username == "romesrf":
-            #     self.login()
-            #     a = self.get_not_following_back()
-            #     self.log(logging.INFO, "Users not following back {} ({}): \n{}".format(self.username, len(a), a))
-                # self.log(logging.INFO, "Account has posted {} posts.".format(self.get_number_of_posts()))
-
-
             if(self.max_likes>0):
 
-                if self.driver is None:
-                    self.driver = self.init_driver()
+                if driver is None:
+                    driver = self.init_driver()
+                    self.driver = driver
+                    customDriver = False
+                    self.login()
 
-                self.login()
-
-                if not self.first_run:
-                    self.like_hashtags(params[0])
-
-                    self.get_follows_list()
+                self.like_hashtags(params[0], driver=driver)
+                self.get_follows_list(driver=driver)
 
         finally:
-            self.quit()
+            if not customDriver:
+                self.quit()
 
     def get_new_followers(self):
         """
@@ -564,7 +572,11 @@ class InstagramBot(Bot):
                             """, (self.username, self.platform))
 
 
-    def get_report_string(self):
+    def get_report_string(self, driver=None):
+
+        if driver==None:
+            driver=self.driver
+
 
         return """
                     Liked [ {} / {} ] posts today.
@@ -574,4 +586,4 @@ class InstagramBot(Bot):
                     {}
                     Not following you back:
                     {}
-                """.format(self.get_likes_given(), self.get_max_likes(), self.hashtag_stories_seen, self.home_stories_seen, len(self.get_new_followers()), self.get_best_hashtags(), self.get_not_following_back())
+                """.format(self.get_likes_given(), self.get_max_likes(), self.hashtag_stories_seen, self.home_stories_seen, len(self.get_new_followers()), self.get_best_hashtags(), self.get_not_following_back(driver))

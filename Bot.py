@@ -59,6 +59,9 @@ class Bot:
         self.posts_seen = 0
         self.time_started = datetime.datetime.now()
         self.time_ended = 0
+        self.user_data_dir = None
+        self.first_run = None
+
 
         self.status = "Unknown Error"
 
@@ -169,24 +172,28 @@ class Bot:
             self.log(logging.INFO, "Starting: " + string)
 
 
-    def scroll_down(self, element, modifier=1):
+    def scroll_down(self, element, modifier=1, driver=None):
         """A method for scrolling the page."""
 
+        if driver==None:
+            driver = self.driver
+
+
         # Get scroll height.
-        last_height = self.driver.execute_script("return arguments[0].scrollHeight", element)
+        last_height = driver.execute_script("return arguments[0].scrollHeight", element)
 
         while True:
 
             # Scroll down to the bottom.
             for i in range(1, int(1/modifier)+1):
-                self.driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight*arguments[1]);", element, modifier*i)
+                driver.execute_script("arguments[0].scrollTo(0, arguments[0].scrollHeight*arguments[1]);", element, modifier*i)
                 time.sleep(0.2)
 
             # Wait to load more followers.
             time.sleep(2)
 
             # Calculate new scroll height and compare with last scroll height.
-            new_height = self.driver.execute_script("return arguments[0].scrollHeight", element)
+            new_height = driver.execute_script("return arguments[0].scrollHeight", element)
 
             if new_height == last_height:
 
@@ -223,7 +230,7 @@ class Bot:
         r = random.random()
         return r <= chanceToLikePost
         
-    def get_report_string(self):
+    def get_report_string(self, driver=None):
         return "This method must be implemented by subclasses! Also, I should learn better how OOP works in python..."
 
     def quit(self, driver=None):
@@ -231,15 +238,16 @@ class Bot:
             driver = self.driver
 
         if self.get_likes_given()<self.get_max_likes() or self.get_max_likes()>0:
-            self.log(self.FINISHED_LEVEL, self.get_report_string())
+            self.log(self.FINISHED_LEVEL, self.get_report_string(driver))
 
-        try:
-            pickle.dump( driver.get_cookies() , open("{}/cookies.pkl".format(self.user_data_dir),"wb") )
-        except Exception as e:
-            self.log(logging.ERROR, "Probably there is no user data dir set:\nUser data dir: {}.\nError: {}".format(self.user_data_dir, e))
+        if self.user_data_dir != None:
+            try:
+                pickle.dump( driver.get_cookies() , open("{}/cookies.pkl".format(self.user_data_dir),"wb") )
+            except Exception as e:
+                self.log(logging.ERROR, "Probably there is no user data dir set:\nUser data dir: {}.\nError: {}".format(self.user_data_dir, e))
 
         if self.first_run:
-            self.log(self.FINISHED_LEVEL, "Completed setup for the first run. Please relaunch to run the program.")
+            self.log(self.INFO, "Completed setup for the first run.")
 
         self.time_ended = datetime.datetime.now()
         
