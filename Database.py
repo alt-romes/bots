@@ -26,13 +26,11 @@ class Database:
                 '''
         cur = self.conn.cursor()
         cur.execute(insert, postApproval)
-        self.conn.commit()
-
 
         insertHashtags = ''' INSERT OR IGNORE INTO managerPostApprovalHashtags(platform, username, post_url, hashtag)
             VALUES(?, ?, ?, ?)
                 '''
-        cur = self.conn.cursor()
+                
         cur.executemany(insertHashtags, [(postApproval[0], postApproval[1], postApproval[3], h) for h in hashtags])
         self.conn.commit()  
 
@@ -49,7 +47,7 @@ class Database:
                 """
 
         cur = self.conn.cursor()
-        cur.execute(update, post)
+        cur.execute(update, postInv)
         self.conn.commit() 
 
     def sent_permission_request(self, post):

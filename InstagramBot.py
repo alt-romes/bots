@@ -403,7 +403,7 @@ class InstagramBot(Bot):
         time.sleep(3)
 
         #For each the post
-        while self.current_posts_liked < (maxLikesPerHour + random_modifier) and self.should_continue(): #and self.likes_given < self.max_likes:
+        while self.current_posts_liked < (maxLikesPerHour + random_modifier) and self.should_continue() and self.current_posts_liked<self.max_likes: #and self.likes_given < self.max_likes:
             self.posts_seen+=1
             isLiked = len(driver.find_elements_by_css_selector('button > svg[fill="#ed4956"]'))>0
 

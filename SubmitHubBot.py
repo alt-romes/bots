@@ -107,5 +107,5 @@ class SubmitHubBot(Bot):
         finally:
             self.quit()
 
-    def get_report_string(self):
+    def get_report_string(self, driver=None):
         return ("Liked [ " + str(self.get_likes_given()) + " / " + str(self.get_max_likes()) + " ] musics.")

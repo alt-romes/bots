@@ -90,8 +90,7 @@ class Bot:
     def init_driver(self, managefunction="", user_agent=""):
         self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_argument("--window-size=1200x800")
-
-        #TODO: Use Chromium?
+        self.chrome_options.add_argument("--mute-audio")
 
         if user_agent == "mobile":
             self.chrome_options.add_argument("--user-agent={}".format("Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1"))
