@@ -5,7 +5,7 @@
 
 Preparation:
 
-| Rename `credentialssample.py` to `credentials.py`. Fill in with username and passwords.
+| Rename `configsample.py` to `config.py`. Fill in with username and passwords.
 
 | Create a directory called "logs", the program can't create directories.
 
