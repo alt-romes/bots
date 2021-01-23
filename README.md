@@ -1,7 +1,4 @@
-# bots
-
-
-I wrote this a long time ago when I was using it. (Not recommended for use)
+I wrote this a long time ago when I was working on it. (I don't recommend using this)
 ---
 (check "how to write a good readme.md")
 
