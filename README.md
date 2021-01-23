@@ -1,7 +1,9 @@
 # bots
 
-(check "how to write a good readme.md")
 
+I wrote this a long time ago when I was using it. (Not recommended for use)
+---
+(check "how to write a good readme.md")
 
 Preparation:
 
@@ -19,7 +21,7 @@ Running:
 ```bash
 python bothub.py
 
-to use curses interface: (might be buggy, stopped using it very soon)
+to use curses interface: (might be buggy, stopped using it very early on)
 python bothub.py --curses  
 
 crontab
